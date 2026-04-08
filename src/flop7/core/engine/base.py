@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 
-import flop7.engine.actions  # Need to import this to register the card actions
-from flop7.classes.cards import Card, SECOND_CHANCE
-from flop7.classes.deck import Deck
-from flop7.classes.player import Player
-from flop7.protocols.decisions import HitStay, TargetSelector
-from flop7.protocols.actions import CardAction
-from flop7.protocols.modifier import ScoreModifier
+import flop7.core.engine.actions  # Need to import this to register the card actions
+from flop7.core.classes.cards import Card, SECOND_CHANCE
+from flop7.core.classes.deck import Deck
+from flop7.core.classes.player import Player
+from flop7.core.protocols.decisions import HitStay, TargetSelector
+from flop7.core.protocols.actions import CardAction
+from flop7.core.protocols.modifier import ScoreModifier
 
 
 class GameEngine(ABC):

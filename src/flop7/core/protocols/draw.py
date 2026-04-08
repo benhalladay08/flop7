@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from flop7.classes.cards import Card
+from flop7.core.classes.cards import Card
 
 class DrawProtocol(Protocol):
     def __call__(self, cards: list[Card]) -> Card:

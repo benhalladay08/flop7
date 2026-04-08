@@ -1,7 +1,7 @@
 import random
 
-from flop7.classes.cards import Card, ALL_CARDS
-from flop7.protocols.draw import DrawProtocol
+from flop7.core.classes.cards import Card, ALL_CARDS
+from flop7.core.protocols.draw import DrawProtocol
 
 
 class Deck:

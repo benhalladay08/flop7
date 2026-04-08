@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING
 
-from flop7.classes.cards import FLIP_THREE, FREEZE, SECOND_CHANCE
-from flop7.enum.decisions import TargetEvent
+from flop7.core.classes.cards import FLIP_THREE, FREEZE, SECOND_CHANCE
+from flop7.core.enum.decisions import TargetEvent
 
 if TYPE_CHECKING:
-    from flop7.classes.cards import Card
-    from flop7.classes.player import Player
-    from flop7.engine.base import GameEngine
+    from flop7.core.classes.cards import Card
+    from flop7.core.classes.player import Player
+    from flop7.core.engine.base import GameEngine
 
 def flip_three(game: GameEngine, player: Player, card: Card) -> bool:
     """

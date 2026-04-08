@@ -1,4 +1,4 @@
-from flop7.classes.cards import Card
+from flop7.core.classes.cards import Card
 
 
 class Player:

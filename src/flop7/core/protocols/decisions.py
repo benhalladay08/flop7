@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from flop7.classes.player import Player
-from flop7.enum.decisions import TargetEvent
+from flop7.core.classes.player import Player
+from flop7.core.enum.decisions import TargetEvent
 
 class HitStay(Protocol):
     def __call__(self, player: Player) -> bool:
