@@ -6,7 +6,7 @@ from flop7.core.enum.decisions import TargetEvent
 if TYPE_CHECKING:
     from flop7.core.classes.cards import Card
     from flop7.core.classes.player import Player
-    from flop7.core.engine.base import GameEngine
+    from flop7.core.engine.engine import GameEngine
 
 def flip_three(game: GameEngine, player: Player, card: Card) -> bool:
     """
