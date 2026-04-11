@@ -1,2 +1,4 @@
 def main():
-    print("Hello, world!")
+    from flop7.app.orchestrator import App
+    app = App()
+    app.run()
