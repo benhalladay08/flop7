@@ -18,7 +18,7 @@ def flip_three(game: GameEngine, player: Player, card: Card) -> bool:
     - Flip Three / Freeze cards are deferred until after all 3 cards are drawn,
       then resolved in order (only if the target hasn't busted).
     """
-    target = game.target_selector(TargetEvent.FLIP_THREE, player, game.active_players)
+    target = game.target_selector(game, TargetEvent.FLIP_THREE, player)
 
     deferred_actions: list[Card] = []
 
@@ -58,7 +58,7 @@ def freeze(game: GameEngine, player: Player, card: Card) -> bool:
     at the end of the round, but they cannot hit or stay.
     """
     # --- Select target (can target self or another player) ---
-    target = game.target_selector(TargetEvent.FREEZE, player, game.active_players)
+    target = game.target_selector(game, TargetEvent.FREEZE, player)
     target.hand.append(card)  # Give the target the Freeze card
     target.is_active = False  # Target is now frozen
     return False
@@ -75,7 +75,13 @@ def second_chance(game: GameEngine, player: Player, card: Card) -> bool:
         game.deck.discard([card])  # No valid targets, so discard the Second Chance card
         return False
 
-    target = game.target_selector(TargetEvent.SECOND_CHANCE, player, possible_players)
+    target = game.target_selector(game, TargetEvent.SECOND_CHANCE, player)
+
+    # Safety check: selector should return only active players without Second Chance.
+    if (not target.is_active) or target.has_card(SECOND_CHANCE):
+        game.deck.discard([card])
+        return False
+
     target.hand.append(card)  # Give the target the Second Chance card
     return False
 

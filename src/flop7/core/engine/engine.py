@@ -1,5 +1,3 @@
-from abc import ABC, abstractmethod
-
 import flop7.core.engine.actions  # Need to import this to register the card actions
 from flop7.core.classes.cards import Card, SECOND_CHANCE
 from flop7.core.classes.deck import Deck
@@ -9,7 +7,7 @@ from flop7.core.protocols.actions import CardAction
 from flop7.core.protocols.modifier import ScoreModifier
 
 
-class GameEngine(ABC):
+class GameEngine:
     """
     Base game engine. Owns the player list, handles scoring, round lifecycle,
     dealer rotation, and win-condition checking. Subclasses provide the card
@@ -52,7 +50,7 @@ class GameEngine(ABC):
         """Run a full round: deal, player turns, scoring, end-of-round cleanup."""
         while len(self.active_players) > 1:
             for player in self.active_players:
-                if self.hit_stay_decider(player):
+                if self.hit_stay_decider(self, player):
                     self.hit(player, self.deck.deal())
                 else:
                     player.is_active = False  # Player stays
