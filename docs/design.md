@@ -2,7 +2,7 @@
 
 The unofficial Flip 7 terminal emulator
 
-> [!NOTE] 
+> NOTE: 
 > This document was created with the help of Github Copilot. The architecture itself was created by Ben Halladay, and Copilot assisted in generating diagrams based on code already written by Ben Halladay.
 
 ## Overview
@@ -26,6 +26,79 @@ Each round, players take turns choosing to **hit** (draw a card) or **stay** (ba
 Action cards allow you to target other players with special abilities: **Flip Three** forces a target to draw 3 cards, **Freeze** forces a target to bank and exit, and **Second Chance** absorbs one future duplicate.
 
 Score modifier cards adjust end-of-round scoring: ×2 doubles the number card total (applied first), then flat bonuses (+2 through +10) are added on top.
+
+## Repo structure overview
+
+The codebase is organized into four domain layers plus entry points:
+
+```text
+src/flop7/
+├── __main__.py              # Entry point for python -m flop7
+├── cli.py                   # Entry point for flop7 command-line tool
+├── app/                     # Top-level orchestration layer
+├── tui/                     # Terminal user interface (urwid-based)
+├── bot/                     # Bot models and decision-making strategies
+└── core/                    # Game rules engine and data models
+```
+
+### Layer responsibilities
+
+- **`app/`** — Orchestrates the application lifecycle and routes user commands to game logic
+- **`tui/`** — Handles all terminal rendering and user input via urwid
+- **`bot/`** — Provides bot player models with configurable decision strategies
+- **`core/`** — Implements the game engine, card definitions, and rules
+- **`cli.py` / `__main__.py`** — Bootstrap the application
+
+## App design
+
+The `app/` layer is the top-level orchestration layer. It is responsible for starting the TUI loop, receiving user commands, and routing those commands into game setup / gameplay state transitions.
+
+### Responsibilities
+
+1. Construct the TUI and provide a command handler callback
+2. Start and stop the application lifecycle (`run`, exit behavior)
+3. Coordinate screen/state transitions at the application level
+4. Act as the bridge between command input and game logic entry points
+
+### Control flow
+
+1. `cli.py` creates `App` and calls `run()`.
+2. `App` constructs `TUIApp`, injecting `handle_user_command` as the callback.
+3. `TUIApp` runs the urwid `MainLoop`.
+4. On Enter, the command bar text is sent back to `App.handle_user_command(...)`.
+5. `App` interprets the command and triggers app-level behavior (navigation, setup, game actions).
+
+### App orchestration diagram
+
+```plantuml
+@startuml
+skinparam classAttributeIconSize 0
+hide empty members
+
+class CLI {
+  +main() : None
+}
+
+class App {
+  +run() : None
+  +handle_user_command(command: str) : None
+}
+
+class TUIApp {
+  +run() : None
+  +set_screen(body) : None
+  +set_command_prompt(prompt) : None
+}
+
+class GameEngine
+
+CLI --> App : creates
+App --> TUIApp : owns
+TUIApp --> App : command callback
+App --> GameEngine : orchestrates
+
+@enduml
+```
 
 ## Core design
 
@@ -220,7 +293,7 @@ The home screen is mostly a landing page:
 - No complicated widgets in the body
 - All interaction happens through the command console
 
-Expected commands from home are simple navigation commands (for example: start real game, start virtual game, run simulation, help, quit).
+Expected commands from home are simple navigation commands (for example: start real game, start virtual game, help, quit).
 
 ### Game screen (simplified)
 
@@ -266,12 +339,9 @@ The bot system is designed as a strategy layer that plugs directly into the core
 
 ### Planned architecture
 
-Bot logic lives in `src/flop7/bot/`, while top-level routing between human and bot decisions belongs in the app orchestration layer (`src/flop7/app/`).
+Bot logic lives in `src/flop7/bot/`.
 
 ```text
-app/
-└── plan.md                  # top-level orchestration notes (TUI sends commands here)
-
 bot/
 ├── base.py                  # AbstractBot contract
 ├── registry.py              # model-name -> bot-class lookup
@@ -293,12 +363,18 @@ These signatures match the core decision protocol style (the full game object is
 
 ### Model registry
 
-`bot/registry.py` provides a central mapping from model names to concrete bot classes:
+`bot/registry.py` provides the `Bot` class, a central registry and factory for bot model instantiation. It maintains a class-level mapping of model names to implementations:
 
 - `Basic` -> `BasicBot`
 - `Omniscient` -> `OmniscientBot`
 
-This keeps setup/UI code decoupled from model class imports. The interface layer can request a model by name, and the registry resolves the implementation.
+Instantiation is handled via the constructor:
+
+```python
+Bot(model="Basic", virtual=False, **params)
+```
+
+The `virtual` flag is used to validate that virtual-only models are not used in real (non-virtual) games. This keeps setup/UI code decoupled from model class imports — the interface layer can request a bot by name without knowing the concrete class.
 
 ### Model behavior (initial set)
 
@@ -331,28 +407,12 @@ Two shared modules are scaffolded for modularity:
 
 The intent is to prevent duplicate math and state-derivation code across models.
 
-### Orchestration boundary
-
-The app layer chooses whether a player decision comes from:
-
-- Human input (TUI command flow), or
-- Bot model (`AbstractBot` implementation)
-
-That dispatch logic belongs at the top level (`app/`), not inside `bot/`, so bot modules remain pure strategy components.
-
-### Simple UML diagram
+### Bot UML diagram
 
 ```plantuml
 @startuml
 skinparam classAttributeIconSize 0
 hide empty members
-
-class AppOrchestrator {
-  +hit_stay(game, player) : bool
-  +target_selector(game, event, player) : Player
-}
-
-class GameEngine
 
 abstract class AbstractBot {
   +hit_stay(game, player) : bool
@@ -362,22 +422,21 @@ abstract class AbstractBot {
 class BasicBot
 class OmniscientBot
 
-class BotRegistry {
-  +available_bots : dict
-  +create(model, params) : AbstractBot
+class Bot {
+  +avaliable_bots : dict
+  +__init__(model, virtual=False, **params) : None
 }
 
-class TUI
+class KnowledgeLayer
+class BotUtils
 
-GameEngine --> AppOrchestrator : decision callbacks
-AppOrchestrator --> TUI : human decisions
-AppOrchestrator --> BotRegistry : get bot model
-AppOrchestrator --> AbstractBot : bot decisions
+AbstractBot ..> KnowledgeLayer : uses
+AbstractBot ..> BotUtils : uses
 
 AbstractBot <|-- BasicBot
 AbstractBot <|-- OmniscientBot
-BotRegistry --> BasicBot
-BotRegistry --> OmniscientBot
+Bot --> BasicBot
+Bot --> OmniscientBot
 
 @enduml
 ```
@@ -385,6 +444,6 @@ BotRegistry --> OmniscientBot
 ### Sequence overview
 
 1. Game engine requests a `HitStay` or `TargetSelector` decision.
-2. App orchestration determines whether the current player is human or bot.
-3. If bot-controlled, the selected model is called via the `AbstractBot` contract.
-4. Model returns decision to engine through the same protocol callback path.
+2. The configured bot model is called via the `AbstractBot` contract.
+3. The model evaluates game state (and, where relevant, helper layers) to choose an action.
+4. The selected action is returned to the engine through the protocol callback path.
