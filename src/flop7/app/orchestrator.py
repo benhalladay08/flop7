@@ -1,5 +1,11 @@
+from flop7.tui.app import TUIApp
+
 class App:
+    def __init__(self):
+        self.tui = TUIApp(self.handle_user_command)
+
     def run(self):
-        print("Welcome to Flip 7!")
-        # Here we would set up the game, players, and start the game loop.
-        # For now, we'll just print a welcome message.
+        self.tui.run()
+
+    def handle_user_command(self, command: str):
+        ...
