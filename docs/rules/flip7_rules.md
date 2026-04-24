@@ -136,7 +136,7 @@ With +4 bonus modifier = 32 points total
 
 1. Set all used cards aside (do not shuffle back into deck)
 2. Pass remaining deck to the left; that player becomes the new Dealer
-3. When the deck runs out, shuffle all discarded cards to form a new deck
+3. Immediately after the deck's last card is drawn, shuffle all discarded cards to form a new deck
 4. If reshuffling mid-round, leave all cards in front of players as they are
 
 ## Winning the Game

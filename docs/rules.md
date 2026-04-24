@@ -194,7 +194,7 @@ x2 modifier:   28 × 2       = 56
 
 1. **Set used cards aside** — do not return them to the deck yet.
 2. **Pass the remaining deck** to the left; that player is the new dealer.
-3. When the **draw pile runs out**, shuffle all set-aside cards into a new deck.
+3. Immediately after the **last card is drawn** from the draw pile, shuffle all set-aside cards into a new deck.
 4. If reshuffling happens **mid-round**, cards in front of players are left as-is — only the set-aside pile is reshuffled.
 
 ---
