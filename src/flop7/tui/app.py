@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import urwid
 
+from flop7.tui.screens.game import GameScreen
 from flop7.tui.screens.home import HomeScreen
 from flop7.tui.widgets.command_bar import CommandBar
 
@@ -32,6 +33,9 @@ class TUIApp:
                 ("instruction", "light cyan", ""),
                 ("command", "white", ""),
                 ("error", "light red", ""),
+                ("active", "white,bold", ""),
+                ("dimmed", "dark gray", ""),
+                ("busted", "light red", ""),
             ],
             unhandled_input=self._on_unhandled_input,
         )
@@ -48,6 +52,12 @@ class TUIApp:
 
     def show_home(self) -> None:
         self.set_screen(HomeScreen())
+
+    def show_game(self, engine, focused_idx: int = 0) -> GameScreen:
+        """Switch to the game screen and return it for later updates."""
+        screen = GameScreen(engine=engine, focused_idx=focused_idx)
+        self.set_screen(screen)
+        return screen
 
     def run(self):
         self.loop.run()
