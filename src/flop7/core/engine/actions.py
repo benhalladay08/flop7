@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from flop7.core.classes.cards import FLIP_THREE, FREEZE, SECOND_CHANCE
 from flop7.core.engine.requests import TargetRequest
 from flop7.core.enum.decisions import TargetEvent
+from flop7.core.protocols.actions import CardAction
 
 if TYPE_CHECKING:
     from flop7.core.classes.cards import Card
@@ -31,13 +34,11 @@ def flip_three(game: GameEngine, player: Player, card: Card):
             break
 
         drawn = yield from game._draw(target)
-        if drawn.special_action is not None:
-            if drawn.name == SECOND_CHANCE.name:
-                yield from game._hit(target, drawn)
-            else:
-                deferred.append(drawn)
-        else:
+        action = get_action(drawn)
+        if action is None or drawn.abbrv == SECOND_CHANCE.abbrv:
             yield from game._hit(target, drawn)
+        else:
+            deferred.append(drawn)
 
     for d in deferred:
         if target.is_active:
@@ -88,7 +89,13 @@ def second_chance(game: GameEngine, player: Player, card: Card):
     target.hand.append(card)
 
 
-# --- Register generators on the card objects ---
-FLIP_THREE.special_action = flip_three
-FREEZE.special_action = freeze
-SECOND_CHANCE.special_action = second_chance
+_ACTIONS: dict[str, CardAction] = {
+    FLIP_THREE.abbrv: flip_three,
+    FREEZE.abbrv: freeze,
+    SECOND_CHANCE.abbrv: second_chance,
+}
+
+
+def get_action(card: Card) -> CardAction | None:
+    """Return the action handler for an action card, if one exists."""
+    return _ACTIONS.get(card.abbrv)

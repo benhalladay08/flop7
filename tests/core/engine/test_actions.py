@@ -1,15 +1,17 @@
 """Tests for flop7.core.engine.actions via the engine's round() generator."""
 
+import pytest
+
 from flop7.core.classes.cards import (
+    ALL_CARDS,
     FIVE,
     THREE,
     SEVEN,
-    NINE,
-    TEN,
     FLIP_THREE,
     FREEZE,
     SECOND_CHANCE,
 )
+from flop7.core.engine.actions import get_action, flip_three, freeze, second_chance
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
     CardDrawnEvent,
@@ -19,6 +21,14 @@ from flop7.core.engine.requests import (
 )
 
 from tests.conftest import drive_round, make_deck, make_players, opening_cards
+
+ACTION_HANDLERS = [
+    (FLIP_THREE, flip_three),
+    (FREEZE, freeze),
+    (SECOND_CHANCE, second_chance),
+]
+ACTION_ABBRVS = {card.abbrv for card, _ in ACTION_HANDLERS}
+NON_ACTION_CARDS = [card for card in ALL_CARDS if card.abbrv not in ACTION_ABBRVS]
 
 
 def _engine(cards, n_players=3):
@@ -33,6 +43,17 @@ def _engine(cards, n_players=3):
         raise RuntimeError("target should not be called; use drive_round")
 
     return GameEngine(deck, players, hit_stay, target)
+
+
+class TestActionRegistry:
+
+    @pytest.mark.parametrize("card,handler", ACTION_HANDLERS)
+    def test_action_cards_resolve_to_handlers(self, card, handler):
+        assert get_action(card) is handler
+
+    @pytest.mark.parametrize("card", NON_ACTION_CARDS)
+    def test_non_action_cards_resolve_to_none(self, card):
+        assert get_action(card) is None
 
 
 class TestFlipThree:

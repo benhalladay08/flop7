@@ -80,10 +80,6 @@ class TestNumberCards:
         assert card.bustable is True
 
     @pytest.mark.parametrize("card", NUMBER_CARDS)
-    def test_number_cards_have_no_special_action(self, card):
-        assert card.special_action is None
-
-    @pytest.mark.parametrize("card", NUMBER_CARDS)
     def test_number_card_points_equal_face_value(self, card):
         assert card.points == int(card.name)
 
@@ -103,15 +99,6 @@ class TestActionCards:
     def test_zero_points(self, card):
         assert card.points == 0
 
-    def test_flip_three_has_special_action(self):
-        assert FLIP_THREE.special_action is not None
-
-    def test_freeze_has_special_action(self):
-        assert FREEZE.special_action is not None
-
-    def test_second_chance_has_special_action(self):
-        assert SECOND_CHANCE.special_action is not None
-
 
 class TestModifierCards:
     """Score modifier cards — not bustable, correct modifier behaviour."""
@@ -121,10 +108,6 @@ class TestModifierCards:
     @pytest.mark.parametrize("card", MODIFIER_CARDS)
     def test_not_bustable(self, card):
         assert card.bustable is False
-
-    @pytest.mark.parametrize("card", MODIFIER_CARDS)
-    def test_no_special_action(self, card):
-        assert card.special_action is None
 
     @pytest.mark.parametrize("card,expected_points", [
         (PLUS_TWO, 2),

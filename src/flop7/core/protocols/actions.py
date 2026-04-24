@@ -15,6 +15,6 @@ class CardAction(Protocol):
         """Generator that performs a card's special action.
 
         Yields decision requests and notification events (same protocol
-        as the engine's ``round()`` generator).  The engine delegates to
-        this via ``yield from card.special_action(game, player, card)``.
+        as the engine's ``round()`` generator). The engine delegates to
+        this through the action registry in ``core.engine.actions``.
         """

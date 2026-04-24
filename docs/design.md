@@ -116,7 +116,7 @@ core/
 
 #### `classes/` — Data Layer
 
-- **`Card`** — A `@dataclass` representing a single card definition. Fields include the card's name, abbreviation, deck count, point value, bustable flag, an optional `special_action` callback, and an optional `score_modifier` callback with an associated `score_priority`. All 22 unique card types are defined as module-level constants in `cards.py` (e.g. `ZERO`, `FLIP_THREE`, `PLUS_TWO`), and collected into `ALL_CARDS` and `CARD_MAP` for lookup.
+- **`Card`** — A `@dataclass` representing a single card definition. Fields include the card's name, abbreviation, deck count, point value, bustable flag, and an optional `score_modifier` callback with an associated `score_priority`. All 22 unique card types are defined as module-level constants in `cards.py` (e.g. `ZERO`, `FLIP_THREE`, `PLUS_TWO`), and collected into `ALL_CARDS` and `CARD_MAP` for lookup.
 
 - **`Deck`** — Manages the draw pile and discard pile. On construction it expands `ALL_CARDS` into the full 94-card list (respecting `num_in_deck`) and shuffles. Drawing is delegated to an injected `DrawProtocol` callable — this allows the same `Deck` class to serve both a virtual game (random pop) and a physical-card mode (external input). After the draw pile's last card is dealt, `reshuffle()` recycles the discard pile.
 
@@ -127,10 +127,10 @@ core/
 - **`GameEngine`** — The core engine class that owns the round lifecycle. It holds the `Deck`, player list, and two injected decision callbacks (`HitStay` and `TargetSelector`). The core loop is:
   1. `play()` calls `round()` until a player reaches 200 points.
   2. `round()` iterates active players: each either hits or stays.
-  3. `hit()` processes a drawn card — checking for Second Chance absorption in `pre_hit_hook()`, dispatching `special_action` callbacks for action cards, and detecting busts for duplicate number cards.
+  3. `hit()` processes a drawn card — checking for Second Chance absorption in `pre_hit_hook()`, resolving action cards through the action registry, and detecting busts for duplicate number cards.
   4. After the round, every player's `active_score` is added to their cumulative `score`, hands are discarded, and the win condition is checked.
 
-- **`actions`** — Module-level functions (`flip_three`, `freeze`, `second_chance`) that implement the three action card effects. Each follows the `CardAction` protocol signature `(game, player, card) -> bool`. At module load time, these functions are patched onto the corresponding `Card` constants via `FLIP_THREE.special_action = flip_three`, etc.
+- **`actions`** — Module-level functions (`flip_three`, `freeze`, `second_chance`) that implement the three action card effects. Each follows the `CardAction` protocol signature, and `get_action(card)` resolves an action handler from the card abbreviation without mutating the card constants.
 
 #### `enum/` — Enumerations
 
@@ -145,7 +145,7 @@ All external behavior the engine depends on is expressed as `typing.Protocol` cl
 | `DrawProtocol` | `(cards: list[Card]) -> Card` | How the deck draws a card (random vs. user-input) |
 | `HitStay` | `(game, player: Player) -> bool` | Decides whether a player hits or stays with access to full game context |
 | `TargetSelector` | `(game, event, player) -> Player` | Picks a target for action cards by deriving candidates from game state |
-| `CardAction` | `(game, player, card) -> bool` | Executes a card's special effect, tied to the `Card` class |
+| `CardAction` | `(game, player, card) -> Generator` | Executes a card's special effect, resolved through the action registry |
 | `ScoreModifier` | `(current_score: int) -> int` | Transforms score (e.g. ×2, +4), tied to the `Card` class |
 
 This protocol-based design decouples the engine from any concrete UI or strategy implementation — the same `GameEngine` can be driven by a TUI, a bot, or automated tests simply by injecting different callables.
@@ -165,7 +165,6 @@ package "core.classes" {
     +num_in_deck : int
     +points : int
     +bustable : bool
-    +special_action : CardAction | None
     +score_priority : int
     +score_modifier : ScoreModifier | None
   }
@@ -209,9 +208,10 @@ package "core.engine" {
   }
 
   class "actions" as Actions <<module>> {
-    +flip_three(game, player, card) : bool
-    +freeze(game, player, card) : bool
-    +second_chance(game, player, card) : bool
+    +flip_three(game, player, card) : Generator
+    +freeze(game, player, card) : Generator
+    +second_chance(game, player, card) : Generator
+    +get_action(card: Card) : CardAction | None
   }
 }
 
@@ -229,7 +229,7 @@ package "core.protocols" {
   }
 
   interface CardAction <<Protocol>> {
-    +__call__(game, player, card) : bool
+    +__call__(game, player, card) : Generator
   }
 
   interface ScoreModifier <<Protocol>> {
@@ -255,7 +255,7 @@ GameEngine --> HitStay : delegates
 GameEngine --> TargetSelector : delegates
 Actions --> GameEngine : operates on
 Actions --> TargetEvent : reads
-Card ..> CardAction : optional callback
+Actions --> CardAction : resolves
 Card ..> ScoreModifier : optional callback
 
 @enduml

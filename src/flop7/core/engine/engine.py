@@ -1,7 +1,7 @@
-import flop7.core.engine.actions  # Need to import this to register the card actions
 from flop7.core.classes.cards import Card, SECOND_CHANCE
 from flop7.core.classes.deck import Deck
 from flop7.core.classes.player import Player
+from flop7.core.engine.actions import get_action
 from flop7.core.engine.requests import (
     CardDrawnEvent,
     CardInputRequest,
@@ -12,8 +12,6 @@ from flop7.core.engine.requests import (
     TargetRequest,
 )
 from flop7.core.protocols.decisions import HitStay, TargetSelector
-from flop7.core.protocols.actions import CardAction
-from flop7.core.protocols.modifier import ScoreModifier
 
 
 class GameEngine:
@@ -160,8 +158,9 @@ class GameEngine:
         if self._pre_hit(player, card):
             return
 
-        if card.special_action is not None:
-            yield from card.special_action(self, player, card)
+        action = get_action(card)
+        if action is not None:
+            yield from action(self, player, card)
             return
 
         if card.bustable and player.has_card(card):

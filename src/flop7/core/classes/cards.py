@@ -9,7 +9,6 @@ class Card:
     num_in_deck: int
     points: int
     bustable: bool
-    special_action: callable | None = None
     score_priority: int = 0  # Higher means applied later in the scoring process
     score_modifier: callable | None = None
 
