@@ -63,10 +63,17 @@ def freeze(game: GameEngine, player: Player, card: Card):
 
 def second_chance(game: GameEngine, player: Player, card: Card):
     """
-    Second Chance action: Give a player a shield that absorbs the next
-    duplicate number card they receive without busting.
+    Second Chance action: The drawing player keeps the shield unless they
+    already have one, in which case they pass it to another active player.
     """
-    eligible = [p for p in game.active_players if not p.has_card(SECOND_CHANCE)]
+    if not player.has_card(SECOND_CHANCE):
+        player.hand.append(card)
+        return
+
+    eligible = [
+        p for p in game.active_players
+        if p is not player and not p.has_card(SECOND_CHANCE)
+    ]
     if not eligible:
         game.deck.discard([card])
         return
@@ -74,7 +81,7 @@ def second_chance(game: GameEngine, player: Player, card: Card):
     target = yield TargetRequest(
         event=TargetEvent.SECOND_CHANCE, source=player, eligible=eligible,
     )
-    if not target.is_active or target.has_card(SECOND_CHANCE):
+    if target not in eligible or not target.is_active or target.has_card(SECOND_CHANCE):
         game.deck.discard([card])
         return
 

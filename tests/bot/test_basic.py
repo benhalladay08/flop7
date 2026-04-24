@@ -201,18 +201,10 @@ class TestTargetFreeze:
 # ---------------------------------------------------------------------------
 
 class TestTargetSecondChance:
-    """Verify Second Chance targeting logic."""
-
-    def test_targets_self_without_sc(self, bot, game):
-        """Bot gives Second Chance to itself when it doesn't already have one."""
-        p1 = game.players[0]
-        p1.hand = [FIVE]
-
-        result = bot.target_selector(game, TargetEvent.SECOND_CHANCE, p1)
-        assert result is p1
+    """Verify duplicate Second Chance re-gifting logic."""
 
     def test_targets_lowest_scorer_when_has_sc(self, bot, game):
-        """When bot already has SC, it gives it to the lowest-scoring eligible player."""
+        """Duplicate SC is given to the lowest-scoring eligible opponent."""
         p1, p2, p3 = game.players
         p1.hand = [SECOND_CHANCE]
         p2.score = 80
@@ -232,6 +224,17 @@ class TestTargetSecondChance:
         result = bot.target_selector(game, TargetEvent.SECOND_CHANCE, p1)
         assert result is p3
 
+    def test_skips_inactive_players(self, bot, game):
+        """Inactive players are not eligible to receive duplicate SC."""
+        p1, p2, p3 = game.players
+        p1.hand = [SECOND_CHANCE]
+        p2.score = 10
+        p2.is_active = False
+        p3.score = 50
+
+        result = bot.target_selector(game, TargetEvent.SECOND_CHANCE, p1)
+        assert result is p3
+
     def test_fallback_to_self_when_no_eligible(self, bot, game):
         """If all active players have SC, bot returns itself."""
         p1, p2, p3 = game.players
@@ -243,7 +246,7 @@ class TestTargetSecondChance:
         assert result is p1
 
     def test_random_tiebreak(self, bot, game):
-        """Tied lowest-scoring eligible players go through random.choice."""
+        """Tied lowest-scoring eligible opponents go through random.choice."""
         p1, p2, p3 = game.players
         p1.hand = [SECOND_CHANCE]
         p2.score = 10

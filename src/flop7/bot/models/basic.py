@@ -34,11 +34,9 @@ depends on the event type:
     broken randomly.
 
 **Second Chance** (``TargetEvent.SECOND_CHANCE``)
-  * If the bot does **not** already hold a Second Chance card it gives
-    it to itself.
-  * If it already has one, it gives the card to the eligible player with
-    the **fewest overall points** – propping up a weaker opponent is
-    preferable to helping a stronger one.  Ties are broken randomly.
+  * This event only occurs when the bot has drawn a duplicate Second Chance.
+    It gives the duplicate to the eligible opponent with the **fewest overall
+    points**.  Ties are broken randomly.
 """
 
 from __future__ import annotations
@@ -101,9 +99,10 @@ class BasicBot(AbstractBot):
         return random.choice(top)
 
     def _second_chance_target(self, game: GameEngine, player: Player) -> Player:
-        if not player.has_card(SECOND_CHANCE):
-            return player
-        eligible = [p for p in game.active_players if not p.has_card(SECOND_CHANCE)]
+        eligible = [
+            p for p in game.active_players
+            if p is not player and not p.has_card(SECOND_CHANCE)
+        ]
         if not eligible:
             return player
         lowest_score = min(overall_score(p) for p in eligible)
