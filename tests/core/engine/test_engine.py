@@ -294,12 +294,20 @@ class TestRealMode:
 
 class TestReshuffle:
 
-    def test_virtual_mode_reshuffles_at_round_start(self):
-        engine = make_engine(opening_cards(0, 1, 2), n_players=3)
+    def test_virtual_mode_does_not_reshuffle_at_round_start(self):
+        engine = make_engine(opening_cards(0, 1, 2) + [FIVE], n_players=3)
         engine.deck.reshuffle = MagicMock()
 
         drive_round(engine, hit_responses=[False, False, False])
-        engine.deck.reshuffle.assert_called_once()
+        engine.deck.reshuffle.assert_not_called()
+
+    def test_virtual_mode_reshuffles_after_last_card_is_drawn(self):
+        engine = make_engine(opening_cards(0, 1, 2), n_players=3)
+        engine.deck.discard([FIVE])
+
+        drive_round(engine, hit_responses=[False, False, False])
+
+        assert engine.deck.draw_pile == [FIVE]
 
     def test_real_mode_does_not_reshuffle(self):
         engine = make_engine([], n_players=3, real_mode=True)

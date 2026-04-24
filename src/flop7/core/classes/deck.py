@@ -26,11 +26,16 @@ class Deck:
         for card in ALL_CARDS:
             cards.extend([card] * card.num_in_deck)
         return cards
-    
+
     def deal(self) -> Card:
-        """Draw a card from the draw pile. Subclasses implement differently."""
+        """Draw a card and reshuffle discards if this was the last draw card."""
+        if not self.draw_pile:
+            raise IndexError("Cannot deal from an empty draw pile.")
+
         card = self.draw(self.draw_pile)
         self.draw_pile.remove(card)
+        if not self.draw_pile:
+            self.reshuffle()
         return card
 
     def discard(self, cards: list[Card]) -> None:
@@ -46,4 +51,3 @@ class Deck:
         self.draw_pile.extend(self.discard_pile)
         self.discard_pile.clear()
         self.shuffle()
-

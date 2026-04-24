@@ -97,9 +97,6 @@ class GameEngine:
         For automated / bot play, use ``play()`` which auto-drives this
         generator using the engine's callables.
         """
-        if not self.real_mode:
-            self.deck.reshuffle()
-
         self._flip7_player = None
 
         # --- Opening deal: one mandatory card per player ---

@@ -1,4 +1,6 @@
 """Tests for flop7.core.classes.deck — Deck construction, deal, discard, reshuffle."""
+from unittest.mock import MagicMock
+
 import pytest
 
 from flop7.core.classes.cards import ALL_CARDS, FIVE, THREE, SEVEN, Card
@@ -47,6 +49,34 @@ class TestDeal:
         assert c2 is THREE
         assert c3 is SEVEN
         assert len(deck.draw_pile) == 0
+
+    def test_last_card_draw_reshuffles_discard_pile(self):
+        deck = make_deck([FIVE])
+        deck.discard([THREE])
+
+        card = deck.deal()
+
+        assert card is FIVE
+        assert deck.draw_pile == [THREE]
+        assert deck.discard_pile == []
+
+    def test_last_card_draw_with_empty_discard_leaves_draw_pile_empty(self):
+        deck = make_deck([FIVE])
+
+        card = deck.deal()
+
+        assert card is FIVE
+        assert deck.draw_pile == []
+        assert deck.discard_pile == []
+
+    def test_empty_draw_pile_raises_without_reshuffling(self):
+        deck = make_deck([])
+        deck.reshuffle = MagicMock()
+
+        with pytest.raises(IndexError, match="empty draw pile"):
+            deck.deal()
+
+        deck.reshuffle.assert_not_called()
 
 
 class TestDiscard:
