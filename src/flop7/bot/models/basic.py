@@ -1,4 +1,111 @@
+"""
+BasicBot – a simple heuristic-driven Flip 7 bot.
+
+Decision Logic
+==============
+
+Hit / Stay
+----------
+The bot uses a conservative point threshold to decide whether to draw
+another card:
+
+1. **Second Chance override** – If the bot currently holds a Second Chance
+   card it will *always* hit, regardless of its hand score.  The safety
+   net makes the extra draw essentially risk-free.
+2. **Threshold check** – If the bot's current hand score (``active_score``)
+   exceeds 25 it stays; otherwise it hits.  The boundary is inclusive:
+   a score of exactly 25 still hits.
+
+Target Selection
+----------------
+When an action card requires the bot to choose a target, the strategy
+depends on the event type:
+
+**Flip Three** (``TargetEvent.FLIP_THREE``)
+  * If the bot has 0 or 1 cards in hand it targets *itself* – more cards
+    early on are almost always beneficial.
+  * Otherwise it targets the active player with the **highest overall
+    score** (cumulative ``score`` + current ``active_score``).  Ties are
+    broken randomly.
+
+**Freeze** (``TargetEvent.FREEZE``)
+  * Targets the active player (other than itself) with the **highest
+    overall score** to knock the leader out of the round.  Ties are
+    broken randomly.
+
+**Second Chance** (``TargetEvent.SECOND_CHANCE``)
+  * If the bot does **not** already hold a Second Chance card it gives
+    it to itself.
+  * If it already has one, it gives the card to the eligible player with
+    the **fewest overall points** – propping up a weaker opponent is
+    preferable to helping a stronger one.  Ties are broken randomly.
+"""
+
+from __future__ import annotations
+
+import random
+from typing import TYPE_CHECKING
+
 from flop7.bot.base import AbstractBot
+from flop7.bot.utils import overall_score
+from flop7.core.classes.cards import SECOND_CHANCE
+from flop7.core.classes.player import Player
+from flop7.core.enum.decisions import TargetEvent
+
+if TYPE_CHECKING:
+    from flop7.core.engine.engine import GameEngine
+
 
 class BasicBot(AbstractBot):
-    ...
+    """Simple threshold-based bot.  See module docstring for full logic."""
+
+    # ----- HitStay --------------------------------------------------------
+
+    def hit_stay(self, game: GameEngine, player: Player) -> bool:
+        if player.has_card(SECOND_CHANCE):
+            return True
+        return player.active_score <= 25
+
+    # ----- TargetSelector -------------------------------------------------
+
+    def target_selector(
+        self,
+        game: GameEngine,
+        event: TargetEvent,
+        player: Player,
+    ) -> Player:
+        if event is TargetEvent.FLIP_THREE:
+            return self._flip_three_target(game, player)
+        if event is TargetEvent.FREEZE:
+            return self._freeze_target(game, player)
+        if event is TargetEvent.SECOND_CHANCE:
+            return self._second_chance_target(game, player)
+        raise ValueError(f"Unknown target event: {event}")
+
+    # ----- private helpers ------------------------------------------------
+
+    def _flip_three_target(self, game: GameEngine, player: Player) -> Player:
+        if len(player.hand) <= 1:
+            return player
+        candidates = list(game.active_players)
+        best_score = max(overall_score(p) for p in candidates)
+        top = [p for p in candidates if overall_score(p) == best_score]
+        return random.choice(top)
+
+    def _freeze_target(self, game: GameEngine, player: Player) -> Player:
+        others = [p for p in game.active_players if p is not player]
+        if not others:
+            return player
+        best_score = max(overall_score(p) for p in others)
+        top = [p for p in others if overall_score(p) == best_score]
+        return random.choice(top)
+
+    def _second_chance_target(self, game: GameEngine, player: Player) -> Player:
+        if not player.has_card(SECOND_CHANCE):
+            return player
+        eligible = [p for p in game.active_players if not p.has_card(SECOND_CHANCE)]
+        if not eligible:
+            return player
+        lowest_score = min(overall_score(p) for p in eligible)
+        bottom = [p for p in eligible if overall_score(p) == lowest_score]
+        return random.choice(bottom)

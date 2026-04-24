@@ -12,11 +12,12 @@ class Bot:
         "Omniscient": OmniscientBot
     }
 
-    def __init__(self, model: str, virtual: bool = False, **params) -> None:
-        if model not in self.avaliable_bots:
-            raise ValueError(f"Bot '{model}' not found. Available bots: {list(self.avaliable_bots.keys())}")
+    @classmethod
+    def create(cls, model: str, virtual: bool = False, **params) -> AbstractBot:
+        if model not in cls.avaliable_bots:
+            raise ValueError(f"Bot '{model}' not found. Available bots: {list(cls.avaliable_bots.keys())}")
         
-        bot_class = self.avaliable_bots[model]
+        bot_class = cls.avaliable_bots[model]
         if not virtual and bot_class.virtual_only:
             raise ValueError(f"Bot '{model}' cannot be used in a non-virtual game.")
         

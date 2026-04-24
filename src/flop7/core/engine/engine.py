@@ -5,6 +5,7 @@ from flop7.core.classes.player import Player
 from flop7.core.engine.requests import (
     CardDrawnEvent,
     CardInputRequest,
+    Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
     RoundOverEvent,
@@ -23,6 +24,8 @@ class GameEngine:
     """
 
     WIN_SCORE = 200
+    FLIP_7_BONUS = 15
+    FLIP_7_COUNT = 7
 
     def __init__(
         self,
@@ -45,6 +48,9 @@ class GameEngine:
         # --- Endgame state ---
         self.game_over: bool = False
         self.winner: Player | None = None
+
+        # --- Flip 7 tracking (reset each round) ---
+        self._flip7_player: Player | None = None
 
     @property
     def active_players(self) -> list[Player]:
@@ -87,6 +93,8 @@ class GameEngine:
         if not self.real_mode:
             self.deck.reshuffle()
 
+        self._flip7_player = None
+
         while len(self.active_players) > 0:
             for player in list(self.active_players):
                 if not player.is_active:
@@ -100,10 +108,17 @@ class GameEngine:
                 card = yield from self._draw(player)
                 yield from self._hit(player, card)
 
+                if self._flip7_player is not None:
+                    break
+            if self._flip7_player is not None:
+                break
+
         # --- End-of-round scoring and cleanup ---
         for player in self.players:
             if not player.busted:
                 player.score += player.active_score
+                if player is self._flip7_player:
+                    player.score += self.FLIP_7_BONUS
             self.deck.discard(player.hand)
             player.hand.clear()
             player.is_active = True
@@ -129,7 +144,7 @@ class GameEngine:
         return card
 
     def _hit(self, player: Player, card: Card):
-        """Process a card through bust / special-action logic."""
+        """Process a card through bust / special-action / flip-7 logic."""
         if self._pre_hit(player, card):
             return
 
@@ -144,6 +159,15 @@ class GameEngine:
             yield PlayerBustedEvent(player=player, card=card)
         else:
             player.hand.append(card)
+            if self._has_flip7(player):
+                self._flip7_player = player
+                for p in self.players:
+                    p.is_active = False
+                yield Flip7Event(player=player)
+
+    def _has_flip7(self, player: Player) -> bool:
+        """Check if a player has 7 unique number (bustable) cards."""
+        return sum(1 for c in player.hand if c.bustable) >= self.FLIP_7_COUNT
 
     def _pre_hit(self, player: Player, card: Card) -> bool:
         """Second Chance absorption check."""

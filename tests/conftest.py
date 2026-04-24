@@ -12,6 +12,7 @@ from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
     CardDrawnEvent,
     CardInputRequest,
+    Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
     RoundOverEvent,

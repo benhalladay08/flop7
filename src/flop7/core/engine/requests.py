@@ -47,3 +47,9 @@ class PlayerBustedEvent:
 class RoundOverEvent:
     """Yield to notify that the round is complete."""
     round_number: int
+
+
+@dataclass
+class Flip7Event:
+    """Yield to notify that a player achieved Flip 7 (7 unique number cards)."""
+    player: Player

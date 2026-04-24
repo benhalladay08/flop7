@@ -1,4 +1,11 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from flop7.core.classes.cards import Card
+
+if TYPE_CHECKING:
+    from flop7.bot.base import AbstractBot
 
 
 class Player:
@@ -7,12 +14,17 @@ class Player:
     Pure state object — no I/O, no strategy logic.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, bot: AbstractBot | None = None):
         self.name = name
+        self.bot = bot
         self.hand: list[Card] = []
         self.score: int = 0
         self.is_active: bool = True  # False if player has stayed or frozen
         self.busted: bool = False  # True if player busted this round
+
+    @property
+    def is_bot(self) -> bool:
+        return self.bot is not None
 
     @property
     def active_score(self) -> int:

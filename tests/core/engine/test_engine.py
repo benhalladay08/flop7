@@ -34,6 +34,7 @@ from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
     CardDrawnEvent,
     CardInputRequest,
+    Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
     RoundOverEvent,
@@ -337,8 +338,8 @@ class TestWinCondition:
 
 class TestRoundExitCondition:
 
-    def test_round_ends_when_one_player_left(self):
-        """The last active player still gets turns, then stays to end the round."""
+    def test_round_ends_when_no_player_left(self):
+        """Ensure the round doesn't end till all players have taken their turn"""
         engine = make_engine([FIVE], n_players=3)
         # P1 hits (FIVE), P2 stays, P3 stays, P1 stays → round ends
         events = drive_round(engine, hit_responses=[True, False, False, False])
@@ -426,3 +427,98 @@ class TestReshuffle:
         # All stay immediately (send cards for real mode's CardInputRequest)
         drive_round(engine, hit_responses=[False, False, False])
         engine.deck.reshuffle.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Flip 7
+# ---------------------------------------------------------------------------
+
+class TestFlip7:
+    """Flip 7: round ends immediately when a player gets 7 unique number cards,
+    that player gets +15 bonus points."""
+
+    def test_flip7_triggers_event(self):
+        """Achieving 7 unique number cards yields a Flip7Event."""
+        # P1 hits 7 times getting 7 unique cards; P2, P3 stay immediately.
+        cards = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX]
+        engine = make_engine(cards, n_players=3)
+        # P1 hit, P2 stay, P3 stay, then P1 hits 6 more times
+        hits = [True, False, False] + [True] * 6
+        events = drive_round(engine, hit_responses=hits)
+        flip7_events = [e for e in events if isinstance(e, Flip7Event)]
+        assert len(flip7_events) == 1
+        assert flip7_events[0].player is engine.players[0]
+
+    def test_flip7_awards_15_bonus(self):
+        """The Flip 7 player gets active_score + 15 bonus."""
+        cards = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX]
+        engine = make_engine(cards, n_players=3)
+        hits = [True, False, False] + [True] * 6
+        drive_round(engine, hit_responses=hits)
+        p1 = engine.players[0]
+        # 0+1+2+3+4+5+6 = 21, plus 15 bonus = 36
+        assert p1.score == 36
+
+    def test_flip7_ends_round_immediately(self):
+        """No more HitStayRequests are yielded after Flip 7 triggers."""
+        cards = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX]
+        engine = make_engine(cards, n_players=3)
+        hits = [True, False, False] + [True] * 6
+        events = drive_round(engine, hit_responses=hits)
+        # After Flip7Event, only RoundOverEvent should follow
+        flip7_idx = next(i for i, e in enumerate(events) if isinstance(e, Flip7Event))
+        after_flip7 = events[flip7_idx + 1:]
+        hit_stay_after = [e for e in after_flip7 if isinstance(e, HitStayRequest)]
+        assert hit_stay_after == []
+
+    def test_flip7_other_players_score_normally(self):
+        """Other players who stayed still get their score (no bonus)."""
+        # P1 hits (FIVE), P2 hits (THREE), P3 stays.
+        # Next pass: P1 hits (ZERO), P2 stays.
+        # Then P1 hits 5 more times to reach 7 unique number cards.
+        cards = [FIVE, THREE, ZERO, ONE, TWO, FOUR, SIX, SEVEN]
+        engine = make_engine(cards, n_players=3)
+        # Pass 1: P1 hit, P2 hit, P3 stay
+        # Pass 2: P1 hit, P2 stay
+        # Passes 3-7: P1 hit (5 more)
+        hits = [True, True, False, True, False] + [True] * 5
+        drive_round(engine, hit_responses=hits)
+        assert engine.players[1].score == 3   # THREE only
+        assert engine.players[2].score == 0   # stayed with no cards
+
+    def test_flip7_non_bustable_cards_dont_count(self):
+        """Modifier and action cards don't count toward the 7-card requirement."""
+        # P1 gets 6 number cards + PLUS_FOUR (not bustable) = only 6 number cards
+        cards = [ZERO, ONE, TWO, THREE, FOUR, FIVE, PLUS_FOUR]
+        engine = make_engine(cards, n_players=3)
+        hits = [True, False, False] + [True] * 6
+        events = drive_round(engine, hit_responses=hits)
+        flip7_events = [e for e in events if isinstance(e, Flip7Event)]
+        assert flip7_events == []  # no flip 7
+
+    def test_flip7_with_modifier_cards_in_hand(self):
+        """Flip 7 triggers based on bustable count even with modifiers present."""
+        # P1 gets PLUS_FOUR, then 7 unique number cards
+        cards = [PLUS_FOUR, ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX]
+        engine = make_engine(cards, n_players=3)
+        hits = [True, False, False] + [True] * 7
+        events = drive_round(engine, hit_responses=hits)
+        flip7_events = [e for e in events if isinstance(e, Flip7Event)]
+        assert len(flip7_events) == 1
+        p1 = engine.players[0]
+        # 0+1+2+3+4+5+6 = 21 number + 4 modifier = 25, plus 15 bonus = 40
+        assert p1.score == 40
+
+    def test_has_flip7_false_with_fewer_than_7(self):
+        """_has_flip7 returns False when player has fewer than 7 number cards."""
+        engine = make_engine([], n_players=3)
+        player = engine.players[0]
+        player.hand = [ZERO, ONE, TWO, THREE, FOUR, FIVE]
+        assert engine._has_flip7(player) is False
+
+    def test_has_flip7_true_with_exactly_7(self):
+        """_has_flip7 returns True when player has exactly 7 number cards."""
+        engine = make_engine([], n_players=3)
+        player = engine.players[0]
+        player.hand = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX]
+        assert engine._has_flip7(player) is True

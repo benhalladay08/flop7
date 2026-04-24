@@ -6,6 +6,7 @@ from flop7.core.classes.cards import ALL_CARDS, FLIP_THREE, FREEZE, SECOND_CHANC
 from flop7.core.engine.requests import (
     CardDrawnEvent,
     CardInputRequest,
+    Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
     RoundOverEvent,
@@ -32,17 +33,20 @@ _VALID_CARD_DISPLAY = "0–12, +2, +4, +6, +8, +10, x2, F3, FZ, SC"
 
 def _build_engine(context: dict):
     """Construct a GameEngine from the accumulated setup context."""
+    from flop7.bot.registry import Bot
     from flop7.core.classes.deck import Deck
     from flop7.core.classes.player import Player
     from flop7.core.engine.engine import GameEngine
 
     game_mode = context["game_mode"]
     real_mode = game_mode == "real"
+    virtual = game_mode == "virtual"
 
     players = [Player(name) for name in context["player_names"]]
 
     for i, bot_type in enumerate(context.get("bot_types", []), 1):
-        players.append(Player(f"Bot {i} ({bot_type})"))
+        bot = Bot.create(bot_type, virtual=virtual)
+        players.append(Player(f"Bot {i} ({bot_type})", bot=bot))
 
     deck = Deck(draw=lambda pile: pile[0])
 
@@ -95,12 +99,22 @@ class GameLoopNode(Node):
         self._game_mode = game_mode
         self._gen = self._engine.round()
         self._current = next(self._gen)
+        self._bot_decision: bool | None = None
+        self._bot_target = None
 
     @property
     def prompt(self) -> Prompt:
         req = self._current
 
         if isinstance(req, HitStayRequest):
+            if req.player.is_bot:
+                decision = req.player.bot.hit_stay(self._engine, req.player)
+                self._bot_decision = decision
+                action = "HIT" if decision else "STAY"
+                return Prompt(
+                    instruction=f"{req.player.name} chose to {action} — press enter",
+                    validator=lambda _: None,
+                )
             return Prompt(
                 instruction=f"{req.player.name}'s turn — hit or stay?",
                 validator=_hit_stay_validator,
@@ -113,6 +127,19 @@ class GameLoopNode(Node):
             )
 
         if isinstance(req, TargetRequest):
+            if req.source.is_bot:
+                target = req.source.bot.target_selector(
+                    self._engine, req.event, req.source,
+                )
+                self._bot_target = target
+                label = req.event.name.replace("_", " ").title()
+                return Prompt(
+                    instruction=(
+                        f"{req.source.name} drew {label}!\n"
+                        f"{req.source.name} targets {target.name} — press enter"
+                    ),
+                    validator=lambda _: None,
+                )
             names = [p.name for p in req.eligible]
             label = req.event.name.replace("_", " ").title()
             return Prompt(
@@ -137,6 +164,15 @@ class GameLoopNode(Node):
                 instruction=(
                     f"{req.player.name} busted! "
                     f"(drew duplicate {req.card.name}). Press enter."
+                ),
+                validator=lambda _: None,
+            )
+
+        if isinstance(req, Flip7Event):
+            return Prompt(
+                instruction=(
+                    f"{req.player.name} achieved Flip 7! "
+                    f"Round over — press enter."
                 ),
                 validator=lambda _: None,
             )
@@ -181,12 +217,20 @@ class GameLoopNode(Node):
         req = self._current
 
         if isinstance(req, HitStayRequest):
+            if req.player.is_bot:
+                decision = self._bot_decision
+                self._bot_decision = None
+                return decision
             return value.lower() == "hit"
 
         if isinstance(req, CardInputRequest):
             return _CARD_LOOKUP[value.lower()]
 
         if isinstance(req, TargetRequest):
+            if req.source.is_bot:
+                target = self._bot_target
+                self._bot_target = None
+                return target
             lower = value.lower()
             return next(p for p in req.eligible if p.name.lower() == lower)
 
