@@ -12,6 +12,7 @@ class Player:
         self.hand: list[Card] = []
         self.score: int = 0
         self.is_active: bool = True  # False if player has stayed or frozen
+        self.busted: bool = False  # True if player busted this round
 
     @property
     def active_score(self) -> int:

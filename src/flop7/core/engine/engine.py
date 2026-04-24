@@ -87,9 +87,9 @@ class GameEngine:
         if not self.real_mode:
             self.deck.reshuffle()
 
-        while len(self.active_players) > 1:
+        while len(self.active_players) > 0:
             for player in list(self.active_players):
-                if not player.is_active or len(self.active_players) <= 1:
+                if not player.is_active:
                     continue
 
                 hit = yield HitStayRequest(player=player)
@@ -102,10 +102,12 @@ class GameEngine:
 
         # --- End-of-round scoring and cleanup ---
         for player in self.players:
-            player.score += player.active_score
+            if not player.busted:
+                player.score += player.active_score
             self.deck.discard(player.hand)
             player.hand.clear()
             player.is_active = True
+            player.busted = False
 
         self.round_number += 1
 
@@ -137,7 +139,7 @@ class GameEngine:
 
         if card.bustable and player.has_card(card):
             player.hand.append(card)
-            player.score = 0
+            player.busted = True
             player.is_active = False
             yield PlayerBustedEvent(player=player, card=card)
         else:
