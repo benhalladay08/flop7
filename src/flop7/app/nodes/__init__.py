@@ -8,6 +8,7 @@ from flop7.app.nodes.setup import (
     BotTypeNode,
     SetupCompleteNode,
 )
+from flop7.app.nodes.game import GameLoopNode, GameOverNode
 
 __all__ = [
     "Node",
@@ -18,4 +19,6 @@ __all__ = [
     "BotCountNode",
     "BotTypeNode",
     "SetupCompleteNode",
+    "GameLoopNode",
+    "GameOverNode",
 ]

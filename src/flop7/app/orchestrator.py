@@ -21,6 +21,16 @@ class App:
             self.tui.exit()
             return
 
+        # --- Screen transitions requested by nodes ---
+        if "_show_game" in self.context:
+            engine = self.context.pop("_show_game")
+            self.context["_game_screen"] = self.tui.show_game(engine)
+
+        if self.context.pop("_show_home", False):
+            self.context.pop("_game_screen", None)
+            self.tui.show_home()
+
         if next_node is not None:
             self._current_node = next_node
+            self.tui.set_prompt(self._current_node.prompt)
             self.tui.set_prompt(self._current_node.prompt)

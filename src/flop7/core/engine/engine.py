@@ -2,6 +2,14 @@ import flop7.core.engine.actions  # Need to import this to register the card act
 from flop7.core.classes.cards import Card, SECOND_CHANCE
 from flop7.core.classes.deck import Deck
 from flop7.core.classes.player import Player
+from flop7.core.engine.requests import (
+    CardDrawnEvent,
+    CardInputRequest,
+    HitStayRequest,
+    PlayerBustedEvent,
+    RoundOverEvent,
+    TargetRequest,
+)
 from flop7.core.protocols.decisions import HitStay, TargetSelector
 from flop7.core.protocols.actions import CardAction
 from flop7.core.protocols.modifier import ScoreModifier
@@ -22,6 +30,7 @@ class GameEngine:
         players: list[Player],
         hit_stay_decider: HitStay,
         target_selector: TargetSelector,
+        real_mode: bool = False,
     ):
         if len(players) < 3:
             raise ValueError("Flip 7 requires at least 3 players.")
@@ -30,6 +39,7 @@ class GameEngine:
         self.players = players
         self.hit_stay_decider = hit_stay_decider
         self.target_selector = target_selector
+        self.real_mode = real_mode
         self.round_number: int = 0
 
         # --- Endgame state ---
@@ -42,67 +52,102 @@ class GameEngine:
         return [p for p in self.players if p.is_active]
     
     def play(self) -> None:
-        """Main game loop. Continues until a player reaches WIN_SCORE."""
+        """Main game loop. Auto-drives the round generator using the
+        engine's callables. Continues until a player reaches WIN_SCORE."""
         while not self.game_over:
-            self.round()
+            gen = self.round()
+            req = next(gen)
+            while True:
+                try:
+                    if isinstance(req, HitStayRequest):
+                        req = gen.send(self.hit_stay_decider(self, req.player))
+                    elif isinstance(req, TargetRequest):
+                        req = gen.send(self.target_selector(self, req.event, req.source))
+                    elif isinstance(req, CardInputRequest):
+                        req = gen.send(self.deck.deal())
+                    else:
+                        req = gen.send(None)
+                except StopIteration:
+                    break
     
-    def round(self) -> None:
-        """Run a full round: deal, player turns, scoring, end-of-round cleanup."""
-        while len(self.active_players) > 1:
-            for player in self.active_players:
-                if self.hit_stay_decider(self, player):
-                    self.hit(player, self.deck.deal())
-                else:
-                    player.is_active = False  # Player stays
+    def round(self):
+        """Generator for one round of play.
 
-        # --- Scoring and cleanup ---
+        Yields decision requests (``HitStayRequest``, ``CardInputRequest``,
+        ``TargetRequest``) and notification events (``CardDrawnEvent``,
+        ``PlayerBustedEvent``, ``RoundOverEvent``).
+
+        Callers advance the generator with ``.send(response)`` where
+        *response* is the answer to the most-recently yielded request.
+        Notification events expect ``None`` back.
+
+        For automated / bot play, use ``play()`` which auto-drives this
+        generator using the engine's callables.
+        """
+        if not self.real_mode:
+            self.deck.reshuffle()
+
+        while len(self.active_players) > 1:
+            for player in list(self.active_players):
+                if not player.is_active or len(self.active_players) <= 1:
+                    continue
+
+                hit = yield HitStayRequest(player=player)
+                if not hit:
+                    player.is_active = False
+                    continue
+
+                card = yield from self._draw(player)
+                yield from self._hit(player, card)
+
+        # --- End-of-round scoring and cleanup ---
         for player in self.players:
             player.score += player.active_score
             self.deck.discard(player.hand)
             player.hand.clear()
-            player.is_active = True  # Reset for next round
+            player.is_active = True
 
         self.round_number += 1
 
-        # --- Endgame logic ---
         if any(p.score >= self.WIN_SCORE for p in self.players):
             self.game_over = True
             self.winner = max(self.players, key=lambda p: p.score)
 
-    def hit(self, player: Player, card: Card) -> None:
-        if self.pre_hit_hook(player, card):
-            return  # Card was consumed by the hook (e.g. Second Chance absorbed a duplicate)
+        yield RoundOverEvent(round_number=self.round_number)
 
-        # --- Handle special action cards (Flip Three, Freeze, Second Chance) ---
-        add_to_hand = True
-        if card.special_action:
-            add_to_hand = card.special_action(self, player, card)
+    # --- round generator helpers --------------------------------------
 
-        # --- Handle normal card reception ---
+    def _draw(self, player: Player):
+        """Yield a draw request (real) or auto-deal and notify (virtual)."""
+        if self.real_mode:
+            card = yield CardInputRequest(player=player)
+        else:
+            card = self.deck.deal()
+        yield CardDrawnEvent(player=player, card=card)
+        return card
+
+    def _hit(self, player: Player, card: Card):
+        """Process a card through bust / special-action logic."""
+        if self._pre_hit(player, card):
+            return
+
+        if card.special_action is not None:
+            yield from card.special_action(self, player, card)
+            return
+
         if card.bustable and player.has_card(card):
             player.hand.append(card)
             player.score = 0
             player.is_active = False
-        elif add_to_hand:
+            yield PlayerBustedEvent(player=player, card=card)
+        else:
             player.hand.append(card)
 
-        self.post_hit_hook(player, card)
-
-    def pre_hit_hook(self, player: Player, card: Card) -> bool:
-        """Hook for pre-hit logic. Returns True if the card was consumed and hit() should abort."""
-        
-        # --- Player can use Second Chance to absorb the duplicate card ---
+    def _pre_hit(self, player: Player, card: Card) -> bool:
+        """Second Chance absorption check."""
         if player.has_card(SECOND_CHANCE) and card.bustable and player.has_card(card):
-            second_chance_card = next(c for c in player.hand if c.name == SECOND_CHANCE)
-            player.hand.remove(second_chance_card)
-            self.deck.discard([second_chance_card, card])
+            sc = next(c for c in player.hand if c.name == SECOND_CHANCE.name)
+            player.hand.remove(sc)
+            self.deck.discard([sc, card])
             return True
-
         return False
-
-    def post_hit_hook(self, player: Player, card: Card) -> None:
-        """Hook for any special logic that needs to run after a card is added to the player's hand."""
-        
-        # --- Special handling for 7 unique number cards ---
-        if len(set(c.name for c in player.hand if c.bustable)) >= 7:
-            pass

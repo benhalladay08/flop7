@@ -243,15 +243,19 @@ class BotTypeNode(Node):
 # ── Setup complete ────────────────────────────────────────────────────────────────
 
 class SetupCompleteNode(Node):
-    """Temporary terminal node confirming setup is done."""
+    """Builds the engine from setup context and starts the game."""
 
     @property
     def prompt(self) -> Prompt:
         return Prompt(
-            instruction="Setup complete! (Game start not yet implemented. Type 'home' to return.)",
-            validator=lambda t: None if t.lower() == "home" else "Type 'home'.",
+            instruction="Setup complete! Press enter to start the game.",
+            validator=lambda t: None,
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        from flop7.app.nodes.home import HomeNode  # avoid circular import
-        return HomeNode()
+        from flop7.app.nodes.game import GameLoopNode, _build_engine
+
+        engine = _build_engine(context)
+        context["_engine"] = engine
+        context["_show_game"] = engine
+        return GameLoopNode(engine, context["game_mode"])

@@ -43,10 +43,12 @@ class GameScreen(urwid.WidgetWrap):
         """Change the focused player and force a layout rebuild."""
         self._focused_idx = idx
         self._last_mode = None
+        self._invalidate()
 
     def refresh(self) -> None:
         """Force a layout rebuild on the next render pass."""
         self._last_mode = None
+        self._invalidate()
 
     # --- render-time layout selection ---------------------------------
 
