@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flop7.app.nodes.base import Node
 from flop7.app.prompt import Prompt
+from flop7.bot.controller import BotController
 from flop7.core.classes.cards import ALL_CARDS, FLIP_THREE, FREEZE, SECOND_CHANCE, TIMES_TWO
 from flop7.core.engine.requests import (
     CardDrawnEvent,
@@ -43,18 +44,23 @@ def _build_engine(context: dict):
     virtual = game_mode == "virtual"
 
     players = [Player(name) for name in context["player_names"]]
+    bots_by_index = {}
 
     for i, bot_type in enumerate(context.get("bot_types", []), 1):
         bot = Bot.create(bot_type, virtual=virtual)
-        players.append(Player(f"Bot {i} ({bot_type})", bot=bot))
+        bot_index = len(players)
+        bots_by_index[bot_index] = bot
+        players.append(Player(f"Bot {i} ({bot_type})"))
 
-    deck = Deck(draw=lambda pile: pile[0])
+    bot_controller = BotController(bots_by_index)
+    context["_bot_controller"] = bot_controller
+    deck = Deck()
 
     return GameEngine(
         deck=deck,
         players=players,
-        hit_stay_decider=lambda g, p: True,   # unused in step mode
-        target_selector=lambda g, e, p: p,    # unused in step mode
+        hit_stay_decider=bot_controller.hit_stay,
+        target_selector=bot_controller.target_selector,
         real_mode=real_mode,
     )
 
@@ -94,9 +100,15 @@ class GameLoopNode(Node):
     via ``.send()``.
     """
 
-    def __init__(self, engine, game_mode: str) -> None:
+    def __init__(
+        self,
+        engine,
+        game_mode: str,
+        bot_controller: BotController | None = None,
+    ) -> None:
         self._engine = engine
         self._game_mode = game_mode
+        self._bot_controller = bot_controller or BotController()
         self._gen = self._engine.round()
         self._current = next(self._gen)
         self._bot_decision: bool | None = None
@@ -107,8 +119,8 @@ class GameLoopNode(Node):
         req = self._current
 
         if isinstance(req, HitStayRequest):
-            if req.player.is_bot:
-                decision = req.player.bot.hit_stay(self._engine, req.player)
+            if self._bot_controller.has_bot(self._engine, req.player):
+                decision = self._bot_controller.hit_stay(self._engine, req.player)
                 self._bot_decision = decision
                 action = "HIT" if decision else "STAY"
                 return Prompt(
@@ -127,9 +139,9 @@ class GameLoopNode(Node):
             )
 
         if isinstance(req, TargetRequest):
-            if req.source.is_bot:
-                target = req.source.bot.target_selector(
-                    self._engine, req.event, req.source,
+            if self._bot_controller.has_bot(self._engine, req.source):
+                target = self._bot_controller.target_selector(
+                    self._engine, req.event, req.source, req.eligible,
                 )
                 self._bot_target = target
                 label = req.event.name.replace("_", " ").title()
@@ -217,7 +229,7 @@ class GameLoopNode(Node):
         req = self._current
 
         if isinstance(req, HitStayRequest):
-            if req.player.is_bot:
+            if self._bot_controller.has_bot(self._engine, req.player):
                 decision = self._bot_decision
                 self._bot_decision = None
                 return decision
@@ -227,7 +239,7 @@ class GameLoopNode(Node):
             return _CARD_LOOKUP[value.lower()]
 
         if isinstance(req, TargetRequest):
-            if req.source.is_bot:
+            if self._bot_controller.has_bot(self._engine, req.source):
                 target = self._bot_target
                 self._bot_target = None
                 return target
@@ -272,5 +284,6 @@ class GameOverNode(Node):
         from flop7.app.nodes.home import HomeNode
         context.pop("_game_screen", None)
         context.pop("_engine", None)
+        context.pop("_bot_controller", None)
         context["_show_home"] = True
         return HomeNode()

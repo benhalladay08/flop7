@@ -258,4 +258,8 @@ class SetupCompleteNode(Node):
         engine = _build_engine(context)
         context["_engine"] = engine
         context["_show_game"] = engine
-        return GameLoopNode(engine, context["game_mode"])
+        return GameLoopNode(
+            engine,
+            context["game_mode"],
+            context.get("_bot_controller"),
+        )

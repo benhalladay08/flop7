@@ -36,19 +36,10 @@ class TestInitialState:
         p = Player("Alice")
         assert p.is_active is True
 
-    def test_bot_default_none(self):
+    def test_has_no_bot_boundary_state(self):
         p = Player("Alice")
-        assert p.bot is None
-
-    def test_is_bot_false_by_default(self):
-        p = Player("Alice")
-        assert p.is_bot is False
-
-    def test_is_bot_true_with_bot(self):
-        from flop7.bot.models.basic import BasicBot
-        p = Player("Bot 1", bot=BasicBot())
-        assert p.is_bot is True
-        assert isinstance(p.bot, BasicBot)
+        assert not hasattr(p, "bot")
+        assert not hasattr(p, "is_bot")
 
 
 class TestActiveScore:

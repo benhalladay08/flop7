@@ -5,29 +5,23 @@ from unittest.mock import patch
 
 import pytest
 
+from flop7.bot.knowledge import build_game_view
 from flop7.bot.models.basic import BasicBot
 from flop7.core.classes.cards import (
     FIVE,
     FOUR,
-    NINE,
     ONE,
     SECOND_CHANCE,
-    SEVEN,
     SIX,
     TEN,
     THREE,
     TWELVE,
     TWO,
 )
-from flop7.core.classes.player import Player
 from flop7.core.enum.decisions import TargetEvent
 
-from tests.conftest import make_deck, make_engine
+from tests.conftest import make_engine
 
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def bot():
@@ -36,227 +30,193 @@ def bot():
 
 @pytest.fixture
 def game():
-    """Minimal engine with 3 players – cards list doesn't matter here."""
+    """Minimal engine with 3 players; cards list does not matter here."""
     return make_engine(cards=[ONE, TWO, THREE], n_players=3)
 
 
-# ---------------------------------------------------------------------------
-# TestHitStay
-# ---------------------------------------------------------------------------
+def _view(game):
+    return build_game_view(game)
+
+
+def _target(bot, game, event, source_index, eligible_indexes):
+    view = _view(game)
+    eligible = tuple(view.players[i] for i in eligible_indexes)
+    return bot.target_selector(view, event, view.players[source_index], eligible)
+
 
 class TestHitStay:
     """Verify the threshold-based hit/stay logic."""
 
     def test_hits_when_low_score(self, bot, game):
-        """Bot hits when active_score is well below threshold."""
-        p = game.players[0]
-        p.hand = [ONE, TWO]  # active_score = 3
-        assert bot.hit_stay(game, p) is True
+        game.players[0].hand = [ONE, TWO]
+        view = _view(game)
+        assert bot.hit_stay(view, view.players[0]) is True
 
     def test_stays_when_high_score(self, bot, game):
-        """Bot stays when active_score exceeds 25."""
-        p = game.players[0]
-        p.hand = [TWELVE, TEN, FIVE]  # active_score = 27
-        assert bot.hit_stay(game, p) is False
+        game.players[0].hand = [TWELVE, TEN, FIVE]
+        view = _view(game)
+        assert bot.hit_stay(view, view.players[0]) is False
 
     def test_boundary_25_hits(self, bot, game):
-        """Exactly 25 is at or below threshold – bot hits."""
-        p = game.players[0]
-        p.hand = [TWELVE, TEN, THREE]  # active_score = 25
-        assert bot.hit_stay(game, p) is True
+        game.players[0].hand = [TWELVE, TEN, THREE]
+        view = _view(game)
+        assert bot.hit_stay(view, view.players[0]) is True
 
     def test_boundary_26_stays(self, bot, game):
-        """26 exceeds threshold – bot stays."""
-        p = game.players[0]
-        p.hand = [TWELVE, TEN, FOUR]  # active_score = 26
-        assert bot.hit_stay(game, p) is False
+        game.players[0].hand = [TWELVE, TEN, FOUR]
+        view = _view(game)
+        assert bot.hit_stay(view, view.players[0]) is False
 
     def test_always_hits_with_second_chance(self, bot, game):
-        """Bot always hits when it holds a Second Chance, even at high score."""
-        p = game.players[0]
-        p.hand = [TWELVE, TEN, FIVE, SECOND_CHANCE]  # active_score = 27
-        assert bot.hit_stay(game, p) is True
+        game.players[0].hand = [TWELVE, TEN, FIVE, SECOND_CHANCE]
+        view = _view(game)
+        assert bot.hit_stay(view, view.players[0]) is True
 
     def test_hits_with_empty_hand(self, bot, game):
-        """Bot hits with an empty hand (score 0)."""
-        p = game.players[0]
-        p.hand = []
-        assert bot.hit_stay(game, p) is True
+        game.players[0].hand = []
+        view = _view(game)
+        assert bot.hit_stay(view, view.players[0]) is True
 
-
-# ---------------------------------------------------------------------------
-# TestTargetFlipThree
-# ---------------------------------------------------------------------------
 
 class TestTargetFlipThree:
     """Verify Flip Three targeting logic."""
 
     def test_self_targets_with_zero_cards(self, bot, game):
-        """Bot targets itself when it has no cards."""
-        p = game.players[0]
-        p.hand = []
-        result = bot.target_selector(game, TargetEvent.FLIP_THREE, p)
-        assert result is p
+        game.players[0].hand = []
+        result = _target(bot, game, TargetEvent.FLIP_THREE, 0, [0, 1, 2])
+        assert result.index == 0
 
     def test_self_targets_with_one_card(self, bot, game):
-        """Bot targets itself when it has exactly one card."""
-        p = game.players[0]
-        p.hand = [ONE]
-        result = bot.target_selector(game, TargetEvent.FLIP_THREE, p)
-        assert result is p
+        game.players[0].hand = [ONE]
+        result = _target(bot, game, TargetEvent.FLIP_THREE, 0, [0, 1, 2])
+        assert result.index == 0
 
     def test_targets_highest_scorer_with_many_cards(self, bot, game):
-        """With 2+ cards, bot targets the player with the highest overall score."""
         p1, p2, p3 = game.players
-        p1.hand = [FIVE, SIX]  # active_score = 11, overall = 11
-        p2.score = 50  # overall = 50
-        p3.score = 10  # overall = 10
+        p1.hand = [FIVE, SIX]
+        p2.score = 50
+        p3.score = 10
 
-        result = bot.target_selector(game, TargetEvent.FLIP_THREE, p1)
-        assert result is p2
+        result = _target(bot, game, TargetEvent.FLIP_THREE, 0, [0, 1, 2])
+        assert result.index == 1
 
     def test_can_target_self_as_highest_scorer(self, bot, game):
-        """Bot may target itself if it has the highest overall score."""
         p1, p2, p3 = game.players
-        p1.hand = [FIVE, SIX]  # active_score = 11
-        p1.score = 100  # overall = 111
+        p1.hand = [FIVE, SIX]
+        p1.score = 100
         p2.score = 5
         p3.score = 5
 
-        result = bot.target_selector(game, TargetEvent.FLIP_THREE, p1)
-        assert result is p1
+        result = _target(bot, game, TargetEvent.FLIP_THREE, 0, [0, 1, 2])
+        assert result.index == 0
 
     def test_random_tiebreak(self, bot, game):
-        """Tied players are passed to random.choice for tiebreaking."""
         p1, p2, p3 = game.players
         p1.hand = [FIVE, SIX]
-        # p2 and p3 tied at 20
         p2.score = 20
         p3.score = 20
+        view = _view(game)
 
         with patch("flop7.bot.models.basic.random.choice") as mock_choice:
-            mock_choice.return_value = p3
-            result = bot.target_selector(game, TargetEvent.FLIP_THREE, p1)
+            mock_choice.return_value = view.players[2]
+            result = bot.target_selector(
+                view,
+                TargetEvent.FLIP_THREE,
+                view.players[0],
+                view.players,
+            )
 
         mock_choice.assert_called_once()
         candidates = mock_choice.call_args[0][0]
-        assert set(candidates) == {p2, p3}
-        assert result is p3
+        assert {c.index for c in candidates} == {1, 2}
+        assert result.index == 2
 
-
-# ---------------------------------------------------------------------------
-# TestTargetFreeze
-# ---------------------------------------------------------------------------
 
 class TestTargetFreeze:
     """Verify Freeze targeting logic."""
 
     def test_targets_highest_scorer_excluding_self(self, bot, game):
-        """Bot freezes the highest-scoring opponent."""
         p1, p2, p3 = game.players
         p1.score = 100
         p2.score = 80
         p3.score = 50
 
-        result = bot.target_selector(game, TargetEvent.FREEZE, p1)
-        assert result is p2
+        result = _target(bot, game, TargetEvent.FREEZE, 0, [0, 1, 2])
+        assert result.index == 1
 
-    def test_skips_inactive_players(self, bot, game):
-        """Inactive players are not eligible for freeze."""
+    def test_uses_engine_provided_eligible_players(self, bot, game):
         p1, p2, p3 = game.players
+        p1.score = 100
         p2.score = 80
-        p2.is_active = False
         p3.score = 50
 
-        result = bot.target_selector(game, TargetEvent.FREEZE, p1)
-        assert result is p3
+        result = _target(bot, game, TargetEvent.FREEZE, 0, [0, 2])
+        assert result.index == 2
 
     def test_fallback_to_self_when_only_active(self, bot, game):
-        """If all other players are inactive, bot targets itself."""
-        p1, p2, p3 = game.players
-        p2.is_active = False
-        p3.is_active = False
-
-        result = bot.target_selector(game, TargetEvent.FREEZE, p1)
-        assert result is p1
+        result = _target(bot, game, TargetEvent.FREEZE, 0, [0])
+        assert result.index == 0
 
     def test_random_tiebreak(self, bot, game):
-        """Tied opponents are passed to random.choice."""
-        p1, p2, p3 = game.players
+        p2, p3 = game.players[1:]
         p2.score = 30
         p3.score = 30
+        view = _view(game)
+        eligible = tuple(view.players[i] for i in [0, 1, 2])
 
         with patch("flop7.bot.models.basic.random.choice") as mock_choice:
-            mock_choice.return_value = p2
-            result = bot.target_selector(game, TargetEvent.FREEZE, p1)
+            mock_choice.return_value = view.players[1]
+            result = bot.target_selector(
+                view,
+                TargetEvent.FREEZE,
+                view.players[0],
+                eligible,
+            )
 
         mock_choice.assert_called_once()
         candidates = mock_choice.call_args[0][0]
-        assert set(candidates) == {p2, p3}
-        assert result is p2
+        assert {c.index for c in candidates} == {1, 2}
+        assert result.index == 1
 
-
-# ---------------------------------------------------------------------------
-# TestTargetSecondChance
-# ---------------------------------------------------------------------------
 
 class TestTargetSecondChance:
     """Verify duplicate Second Chance re-gifting logic."""
 
-    def test_targets_lowest_scorer_when_has_sc(self, bot, game):
-        """Duplicate SC is given to the lowest-scoring eligible opponent."""
-        p1, p2, p3 = game.players
-        p1.hand = [SECOND_CHANCE]
+    def test_targets_lowest_scorer(self, bot, game):
+        p2, p3 = game.players[1:]
         p2.score = 80
         p3.score = 20
 
-        result = bot.target_selector(game, TargetEvent.SECOND_CHANCE, p1)
-        assert result is p3
+        result = _target(bot, game, TargetEvent.SECOND_CHANCE, 0, [1, 2])
+        assert result.index == 2
 
-    def test_skips_players_who_have_sc(self, bot, game):
-        """Players who already have SC are not eligible."""
-        p1, p2, p3 = game.players
-        p1.hand = [SECOND_CHANCE]
-        p2.hand = [SECOND_CHANCE]
-        p2.score = 10  # lowest but ineligible
-        p3.score = 50
+    def test_uses_engine_provided_eligible_players(self, bot, game):
+        game.players[1].score = 10
+        game.players[2].score = 50
 
-        result = bot.target_selector(game, TargetEvent.SECOND_CHANCE, p1)
-        assert result is p3
-
-    def test_skips_inactive_players(self, bot, game):
-        """Inactive players are not eligible to receive duplicate SC."""
-        p1, p2, p3 = game.players
-        p1.hand = [SECOND_CHANCE]
-        p2.score = 10
-        p2.is_active = False
-        p3.score = 50
-
-        result = bot.target_selector(game, TargetEvent.SECOND_CHANCE, p1)
-        assert result is p3
+        result = _target(bot, game, TargetEvent.SECOND_CHANCE, 0, [2])
+        assert result.index == 2
 
     def test_fallback_to_self_when_no_eligible(self, bot, game):
-        """If all active players have SC, bot returns itself."""
-        p1, p2, p3 = game.players
-        p1.hand = [SECOND_CHANCE]
-        p2.hand = [SECOND_CHANCE]
-        p3.hand = [SECOND_CHANCE]
-
-        result = bot.target_selector(game, TargetEvent.SECOND_CHANCE, p1)
-        assert result is p1
+        result = _target(bot, game, TargetEvent.SECOND_CHANCE, 0, [])
+        assert result.index == 0
 
     def test_random_tiebreak(self, bot, game):
-        """Tied lowest-scoring eligible opponents go through random.choice."""
-        p1, p2, p3 = game.players
-        p1.hand = [SECOND_CHANCE]
-        p2.score = 10
-        p3.score = 10
+        game.players[1].score = 10
+        game.players[2].score = 10
+        view = _view(game)
+        eligible = tuple(view.players[i] for i in [1, 2])
 
         with patch("flop7.bot.models.basic.random.choice") as mock_choice:
-            mock_choice.return_value = p2
-            result = bot.target_selector(game, TargetEvent.SECOND_CHANCE, p1)
+            mock_choice.return_value = view.players[1]
+            result = bot.target_selector(
+                view,
+                TargetEvent.SECOND_CHANCE,
+                view.players[0],
+                eligible,
+            )
 
         mock_choice.assert_called_once()
         candidates = mock_choice.call_args[0][0]
-        assert set(candidates) == {p2, p3}
-        assert result is p2
+        assert {c.index for c in candidates} == {1, 2}
+        assert result.index == 1

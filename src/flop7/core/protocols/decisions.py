@@ -15,7 +15,13 @@ class HitStay(Protocol):
         """
 
 class TargetSelector(Protocol):
-    def __call__(self, game: GameEngine, event: TargetEvent, player: Player) -> Player:
+    def __call__(
+        self,
+        game: GameEngine,
+        event: TargetEvent,
+        player: Player,
+        eligible: list[Player],
+    ) -> Player:
         """
         Return the target player for a given action event.
         """

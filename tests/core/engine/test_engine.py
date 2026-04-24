@@ -40,16 +40,16 @@ class TestConstructor:
     def test_fewer_than_3_players_raises(self):
         deck = make_deck([])
         with pytest.raises(ValueError, match="at least 3"):
-            GameEngine(deck, make_players(2), lambda g, p: True, lambda g, e, s: s)
+            GameEngine(deck, make_players(2), lambda g, p: True, lambda g, e, s, el: s)
 
     def test_exactly_3_players_ok(self):
         deck = make_deck([FIVE])
-        engine = GameEngine(deck, make_players(3), lambda g, p: True, lambda g, e, s: s)
+        engine = GameEngine(deck, make_players(3), lambda g, p: True, lambda g, e, s, el: s)
         assert len(engine.players) == 3
 
     def test_initial_state(self):
         deck = make_deck([])
-        engine = GameEngine(deck, make_players(3), lambda g, p: True, lambda g, e, s: s)
+        engine = GameEngine(deck, make_players(3), lambda g, p: True, lambda g, e, s, el: s)
         assert engine.round_number == 0
         assert engine.game_over is False
         assert engine.winner is None
@@ -266,7 +266,7 @@ class TestPlay:
         def hit_stay(game, player):
             return len(player.hand) == 1
 
-        def target_selector(game, event, source):
+        def target_selector(game, event, source, eligible):
             return game.active_players[0]
 
         engine = GameEngine(

@@ -118,7 +118,7 @@ core/
 
 - **`Card`** — A `@dataclass` representing a single card definition. Fields include the card's name, abbreviation, deck count, point value, bustable flag, and an optional `score_modifier` callback with an associated `score_priority`. All 22 unique card types are defined as module-level constants in `cards.py` (e.g. `ZERO`, `FLIP_THREE`, `PLUS_TWO`), and collected into `ALL_CARDS` and `CARD_MAP` for lookup.
 
-- **`Deck`** — Manages the draw pile and discard pile. On construction it expands `ALL_CARDS` into the full 94-card list (respecting `num_in_deck`) and shuffles. Drawing is delegated to an injected `DrawProtocol` callable — this allows the same `Deck` class to serve both a virtual game (random pop) and a physical-card mode (external input). After the draw pile's last card is dealt, `reshuffle()` recycles the discard pile.
+- **`Deck`** — Manages the draw pile and discard pile. On construction it expands `ALL_CARDS` into the full 94-card list (respecting `num_in_deck`) and shuffles, unless an explicit ordered card list is provided for tests or simulations. `draw_pile[0]` is always the next virtual card. After the draw pile's last card is dealt, `reshuffle()` recycles the discard pile.
 
 - **`Player`** — Pure state container for a single player. Tracks `name`, `hand`, cumulative `score`, and `is_active` status. The computed property `active_score` calculates the current round score by sorting modifiers by `score_priority` (×2 first, then flat bonuses) and folding them over the number-card sum.
 
@@ -142,9 +142,8 @@ All external behavior the engine depends on is expressed as `typing.Protocol` cl
 
 | Protocol | Signature | Purpose |
 |---|---|---|
-| `DrawProtocol` | `(cards: list[Card]) -> Card` | How the deck draws a card (random vs. user-input) |
 | `HitStay` | `(game, player: Player) -> bool` | Decides whether a player hits or stays with access to full game context |
-| `TargetSelector` | `(game, event, player) -> Player` | Picks a target for action cards by deriving candidates from game state |
+| `TargetSelector` | `(game, event, player, eligible) -> Player` | Picks one target from engine-provided legal targets |
 | `CardAction` | `(game, player, card) -> Generator` | Executes a card's special effect, resolved through the action registry |
 | `ScoreModifier` | `(current_score: int) -> int` | Transforms score (e.g. ×2, +4), tied to the `Card` class |
 
@@ -172,7 +171,6 @@ package "core.classes" {
   class Deck {
     +draw_pile : list[Card]
     +discard_pile : list[Card]
-    -draw : DrawProtocol
     +deal() : Card
     +discard(cards: list[Card]) : None
     +shuffle() : None
@@ -216,16 +214,12 @@ package "core.engine" {
 }
 
 package "core.protocols" {
-  interface DrawProtocol <<Protocol>> {
-    +__call__(cards: list[Card]) : Card
-  }
-
   interface HitStay <<Protocol>> {
     +__call__(game, player: Player) : bool
   }
 
   interface TargetSelector <<Protocol>> {
-    +__call__(game, event, player) : Player
+    +__call__(game, event, player, eligible) : Player
   }
 
   interface CardAction <<Protocol>> {
@@ -246,7 +240,6 @@ package "core.enum" {
 }
 
 ' --- Relationships ---
-Deck --> DrawProtocol : uses
 Deck "1" o-- "*" Card : draw_pile / discard_pile
 Player "1" o-- "*" Card : hand
 GameEngine "1" *-- "1" Deck
@@ -328,12 +321,12 @@ This design keeps the interface fast, accessible over any terminal, and easy to 
 
 ## Virtual Bots
 
-The bot system is designed as a strategy layer that plugs directly into the core engine decision protocols.
+The bot system is a strategy layer outside `core`. Core players are plain game-state objects; bot ownership and dispatch live in adapter/controller code that converts engine requests into read-only bot views.
 
 ### Design goals
 
 1. Support multiple bot models with minimal boilerplate
-2. Keep bot decision logic isolated from TUI and orchestration
+2. Keep bot decision logic isolated from core mutation and TUI prompts
 3. Allow advanced models (like omniscient) in virtual mode only
 4. Make model registration and selection simple for setup screens
 
@@ -344,9 +337,10 @@ Bot logic lives in `src/flop7/bot/`.
 ```text
 bot/
 ├── base.py                  # AbstractBot contract
+├── controller.py            # engine request -> bot view adapter
 ├── registry.py              # model-name -> bot-class lookup
-├── knowledge.py             # shared game-state views (planned)
-├── utils.py                 # shared probability helpers (planned)
+├── knowledge.py             # frozen game-state views
+├── utils.py                 # shared strategy helpers
 └── models/
   ├── basic.py             # baseline probability-driven bot
   └── omniscient.py        # full-information virtual-only bot
@@ -356,10 +350,10 @@ bot/
 
 All bot models implement `AbstractBot` in `bot/base.py`:
 
-- `hit_stay(game, player) -> bool`
-- `target_selector(game, event, player) -> Player`
+- `hit_stay(view, player_view) -> bool`
+- `target_selector(view, event, player_view, eligible_views) -> PlayerView`
 
-These signatures match the core decision protocol style (the full game object is passed in), so each model can inspect round state, scores, and active players before deciding.
+Bots receive frozen `GameView`, `PlayerView`, and `DeckView` snapshots instead of the mutable `GameEngine`. In virtual mode, `DeckView.draw_order` exposes the full future draw order; in real mode, unknown future cards are represented by an empty draw order.
 
 ### Model registry
 
@@ -368,10 +362,10 @@ These signatures match the core decision protocol style (the full game object is
 - `Basic` -> `BasicBot`
 - `Omniscient` -> `OmniscientBot`
 
-Instantiation is handled via the constructor:
+Instantiation is handled via the factory:
 
 ```python
-Bot(model="Basic", virtual=False, **params)
+Bot.create("Basic", virtual=False, **params)
 ```
 
 The `virtual` flag is used to validate that virtual-only models are not used in real (non-virtual) games. This keeps setup/UI code decoupled from model class imports — the interface layer can request a bot by name without knowing the concrete class.
@@ -382,9 +376,9 @@ The `virtual` flag is used to validate that virtual-only models are not used in 
 
 The baseline model targets straightforward, explainable strategy:
 
-- Estimate bust risk before hitting
-- Stay when bust risk exceeds a threshold
-- For action cards, target the strongest active opponent (highest score / board pressure)
+- Hit while active score is 25 or less
+- Always hit with Second Chance
+- For action cards, choose from the engine-provided eligible targets
 
 This model is intended to be predictable and easy to benchmark.
 
@@ -398,12 +392,12 @@ The omniscient model is a benchmarking model for virtual play:
 
 Because it uses hidden information, it should be restricted to virtual games and never used for live/real deck tracking mode.
 
-### Knowledge and utility layers (planned)
+### Knowledge and utility layers
 
-Two shared modules are scaffolded for modularity:
+Two shared modules keep bot logic decoupled from mutable engine objects:
 
-- `knowledge.py`: builds reusable game-state views (public-only vs omniscient)
-- `utils.py`: common helper math (bust probability, score pressure heuristics, tie-break logic)
+- `knowledge.py`: builds frozen `GameView`, `PlayerView`, and `DeckView` snapshots
+- `utils.py`: common helper math such as overall score and future probability helpers
 
 The intent is to prevent duplicate math and state-derivation code across models.
 
@@ -415,22 +409,28 @@ skinparam classAttributeIconSize 0
 hide empty members
 
 abstract class AbstractBot {
-  +hit_stay(game, player) : bool
-  +target_selector(game, event, player) : Player
+  +hit_stay(view, player_view) : bool
+  +target_selector(view, event, player_view, eligible_views) : PlayerView
 }
 
 class BasicBot
 class OmniscientBot
+class BotController
+class GameView
+class PlayerView
+class DeckView
 
 class Bot {
   +avaliable_bots : dict
-  +__init__(model, virtual=False, **params) : None
+  +create(model, virtual=False, **params) : AbstractBot
 }
 
-class KnowledgeLayer
 class BotUtils
 
-AbstractBot ..> KnowledgeLayer : uses
+BotController --> AbstractBot : calls
+BotController --> GameView : builds
+GameView o-- PlayerView
+GameView o-- DeckView
 AbstractBot ..> BotUtils : uses
 
 AbstractBot <|-- BasicBot
@@ -443,7 +443,8 @@ Bot --> OmniscientBot
 
 ### Sequence overview
 
-1. Game engine requests a `HitStay` or `TargetSelector` decision.
-2. The configured bot model is called via the `AbstractBot` contract.
-3. The model evaluates game state (and, where relevant, helper layers) to choose an action.
-4. The selected action is returned to the engine through the protocol callback path.
+1. Game engine yields a `HitStayRequest` or `TargetRequest`.
+2. The app/controller identifies whether the source player is bot-controlled.
+3. `BotController` builds a frozen `GameView` and calls the configured bot.
+4. The bot returns a boolean or eligible `PlayerView`.
+5. `BotController` maps the result back to the engine's expected `Player` object.

@@ -1,32 +1,35 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-
-from flop7.core.classes.player import Player
-from flop7.core.enum.decisions import TargetEvent
-
 from typing import TYPE_CHECKING
 
+from flop7.core.enum.decisions import TargetEvent
+
 if TYPE_CHECKING:
-    from flop7.core.engine.engine import GameEngine
+    from flop7.bot.knowledge import GameView, PlayerView
+
 
 class AbstractBot(ABC):
     """
     Base class for bots. Subclasses must implement the hit_stay method
-    and target_selector method, which the game engine will call during play.
+    and target_selector method, which a bot controller calls with read-only
+    game-state views.
     """
 
     virtual_only: bool = False  # Whether this bot can only be used in a virtual game (e.g. relies on perfect information)
 
     @abstractmethod
-    def hit_stay(self, game: GameEngine, player: Player) -> bool:
+    def hit_stay(self, view: GameView, player: PlayerView) -> bool:
         """Return True to hit, False to stay."""
         pass
 
     @abstractmethod
     def target_selector(
         self,
-        game: GameEngine,
+        view: GameView,
         event: TargetEvent,
-        player: Player,
-    ) -> Player:
-        """Given the game state and event, select a target."""
+        player: PlayerView,
+        eligible: tuple[PlayerView, ...],
+    ) -> PlayerView:
+        """Given the game state and event, select an eligible target."""
         pass

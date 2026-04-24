@@ -1,4 +1,6 @@
 """Tests for flop7.core.classes.cards — card definitions and deck composition."""
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from flop7.core.classes.cards import (
@@ -153,3 +155,10 @@ class TestCardMap:
 
     def test_map_size_matches_all_cards(self):
         assert len(CARD_MAP) == len(ALL_CARDS)
+
+
+class TestCardImmutability:
+
+    def test_cards_are_frozen(self):
+        with pytest.raises(FrozenInstanceError):
+            FIVE.points = 99

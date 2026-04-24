@@ -24,12 +24,12 @@ depends on the event type:
 **Flip Three** (``TargetEvent.FLIP_THREE``)
   * If the bot has 0 or 1 cards in hand it targets *itself* – more cards
     early on are almost always beneficial.
-  * Otherwise it targets the active player with the **highest overall
+  * Otherwise it targets the eligible player with the **highest overall
     score** (cumulative ``score`` + current ``active_score``).  Ties are
     broken randomly.
 
 **Freeze** (``TargetEvent.FREEZE``)
-  * Targets the active player (other than itself) with the **highest
+  * Targets the eligible player (other than itself) with the **highest
     overall score** to knock the leader out of the round.  Ties are
     broken randomly.
 
@@ -47,11 +47,10 @@ from typing import TYPE_CHECKING
 from flop7.bot.base import AbstractBot
 from flop7.bot.utils import overall_score
 from flop7.core.classes.cards import SECOND_CHANCE
-from flop7.core.classes.player import Player
 from flop7.core.enum.decisions import TargetEvent
 
 if TYPE_CHECKING:
-    from flop7.core.engine.engine import GameEngine
+    from flop7.bot.knowledge import GameView, PlayerView
 
 
 class BasicBot(AbstractBot):
@@ -59,7 +58,7 @@ class BasicBot(AbstractBot):
 
     # ----- HitStay --------------------------------------------------------
 
-    def hit_stay(self, game: GameEngine, player: Player) -> bool:
+    def hit_stay(self, view: GameView, player: PlayerView) -> bool:
         if player.has_card(SECOND_CHANCE):
             return True
         return player.active_score <= 25
@@ -68,41 +67,52 @@ class BasicBot(AbstractBot):
 
     def target_selector(
         self,
-        game: GameEngine,
+        view: GameView,
         event: TargetEvent,
-        player: Player,
-    ) -> Player:
+        player: PlayerView,
+        eligible: tuple[PlayerView, ...],
+    ) -> PlayerView:
         if event is TargetEvent.FLIP_THREE:
-            return self._flip_three_target(game, player)
+            return self._flip_three_target(player, eligible)
         if event is TargetEvent.FREEZE:
-            return self._freeze_target(game, player)
+            return self._freeze_target(player, eligible)
         if event is TargetEvent.SECOND_CHANCE:
-            return self._second_chance_target(game, player)
+            return self._second_chance_target(player, eligible)
         raise ValueError(f"Unknown target event: {event}")
 
     # ----- private helpers ------------------------------------------------
 
-    def _flip_three_target(self, game: GameEngine, player: Player) -> Player:
-        if len(player.hand) <= 1:
+    def _flip_three_target(
+        self,
+        player: PlayerView,
+        eligible: tuple[PlayerView, ...],
+    ) -> PlayerView:
+        if len(player.hand) <= 1 and player in eligible:
             return player
-        candidates = list(game.active_players)
+        candidates = eligible
         best_score = max(overall_score(p) for p in candidates)
         top = [p for p in candidates if overall_score(p) == best_score]
         return random.choice(top)
 
-    def _freeze_target(self, game: GameEngine, player: Player) -> Player:
-        others = [p for p in game.active_players if p is not player]
+    def _freeze_target(
+        self,
+        player: PlayerView,
+        eligible: tuple[PlayerView, ...],
+    ) -> PlayerView:
+        others = [p for p in eligible if p.index != player.index]
         if not others:
-            return player
+            if player in eligible:
+                return player
+            return random.choice(eligible)
         best_score = max(overall_score(p) for p in others)
         top = [p for p in others if overall_score(p) == best_score]
         return random.choice(top)
 
-    def _second_chance_target(self, game: GameEngine, player: Player) -> Player:
-        eligible = [
-            p for p in game.active_players
-            if p is not player and not p.has_card(SECOND_CHANCE)
-        ]
+    def _second_chance_target(
+        self,
+        player: PlayerView,
+        eligible: tuple[PlayerView, ...],
+    ) -> PlayerView:
         if not eligible:
             return player
         lowest_score = min(overall_score(p) for p in eligible)

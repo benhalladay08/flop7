@@ -66,7 +66,11 @@ class GameEngine:
                     if isinstance(req, HitStayRequest):
                         req = gen.send(self.hit_stay_decider(self, req.player))
                     elif isinstance(req, TargetRequest):
-                        req = gen.send(self.target_selector(self, req.event, req.source))
+                        req = gen.send(
+                            self.target_selector(
+                                self, req.event, req.source, req.eligible,
+                            )
+                        )
                     elif isinstance(req, CardInputRequest):
                         req = gen.send(self.deck.deal())
                     else:

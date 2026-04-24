@@ -3,22 +3,22 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from flop7.core.classes.cards import ALL_CARDS, FIVE, THREE, SEVEN, Card
+from flop7.core.classes.cards import ALL_CARDS, FIVE, THREE, SEVEN
 from flop7.core.classes.deck import Deck
 
-from tests.conftest import deterministic_draw, make_deck
+from tests.conftest import make_deck
 
 
 class TestBuildCardList:
     """Deck._build_card_list expands ALL_CARDS into 94 individual cards."""
 
     def test_total_count(self):
-        deck = Deck(draw=deterministic_draw([]))
+        deck = Deck()
         cards = deck._build_card_list()
         assert len(cards) == 94
 
     def test_each_card_appears_correct_times(self):
-        deck = Deck(draw=deterministic_draw([]))
+        deck = Deck()
         cards = deck._build_card_list()
         for template in ALL_CARDS:
             count = sum(1 for c in cards if c is template)
@@ -28,7 +28,7 @@ class TestBuildCardList:
 
 
 class TestDeal:
-    """Deck.deal removes from draw_pile and returns via the DrawProtocol."""
+    """Deck.deal removes and returns the next card in draw-pile order."""
 
     def test_deal_returns_expected_card(self):
         deck = make_deck([FIVE, THREE, SEVEN])
@@ -39,6 +39,7 @@ class TestDeal:
         deck = make_deck([FIVE, THREE, SEVEN])
         deck.deal()
         assert len(deck.draw_pile) == 2
+        assert deck.draw_pile == [THREE, SEVEN]
 
     def test_sequential_deals(self):
         deck = make_deck([FIVE, THREE, SEVEN])

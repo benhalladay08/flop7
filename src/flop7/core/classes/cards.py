@@ -1,7 +1,8 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Card:
     """Base dataclass for all Flip 7 cards."""
     name: str
@@ -10,7 +11,7 @@ class Card:
     points: int
     bustable: bool
     score_priority: int = 0  # Higher means applied later in the scoring process
-    score_modifier: callable | None = None
+    score_modifier: Callable[[int], int] | None = None
 
 
 # Number Cards (0-12)

@@ -39,7 +39,7 @@ def _engine(cards, n_players=3):
     def hit_stay(g, p):
         raise RuntimeError("hit_stay should not be called; use drive_round")
 
-    def target(g, e, s):
+    def target(g, e, s, eligible):
         raise RuntimeError("target should not be called; use drive_round")
 
     return GameEngine(deck, players, hit_stay, target)

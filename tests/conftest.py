@@ -37,39 +37,12 @@ def opening_cards(*player_indexes: int) -> list[Card]:
 
 
 # ---------------------------------------------------------------------------
-# Deterministic draw callable
-# ---------------------------------------------------------------------------
-
-def deterministic_draw(cards: list[Card]):
-    """Return a DrawProtocol-compatible callable that pops cards in order.
-
-    The callable ignores the ``draw_pile`` argument and returns cards from
-    the pre-set list in FIFO order.  The card must still be present in the
-    draw_pile (Deck.deal removes it), so callers must ensure the draw_pile
-    actually contains these cards.
-    """
-    it = iter(cards)
-
-    def _draw(draw_pile: list[Card]) -> Card:
-        return next(it)
-
-    return _draw
-
-
-# ---------------------------------------------------------------------------
 # Factory helpers
 # ---------------------------------------------------------------------------
 
 def make_deck(cards: list[Card]) -> Deck:
-    """Build a Deck whose deal() returns *cards* in order.
-
-    The deck's internal draw_pile is replaced with *cards* so that the
-    deterministic draw callable and the pile stay in sync.
-    """
-    deck = Deck(draw=deterministic_draw(cards))
-    # Replace the auto-built 94-card pile with our controlled list
-    deck.draw_pile = list(cards)
-    return deck
+    """Build a Deck whose deal() returns *cards* in order."""
+    return Deck(cards=cards)
 
 
 def make_players(n: int) -> list[Player]:
@@ -94,7 +67,12 @@ def make_engine(
     def hit_stay(game: GameEngine, player: Player) -> bool:
         return next(hit_iter)
 
-    def target_selector(game: GameEngine, event, source: Player) -> Player:
+    def target_selector(
+        game: GameEngine,
+        event,
+        source: Player,
+        eligible: list[Player],
+    ) -> Player:
         return next(target_iter)
 
     engine = GameEngine(
