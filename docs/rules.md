@@ -74,9 +74,9 @@ Each number card's **count in the deck equals its face value**, except 0 which h
 
 1. The dealer deals one card face-up to each player (including themselves), going around the table.
 2. If an **Action card** is dealt, pause and resolve it immediately before continuing.
-3. Continue dealing until every player has received at least one card.
+3. The opening deal ends once each player has been dealt exactly one card, even if that card was an Action card that does not remain in front of them.
 
-> After initial dealing, players may have different numbers of cards due to Action cards.
+> After initial dealing, players may have different numbers of cards due to Action cards. Some players may even start their first turn with no cards in front of them.
 
 ### Turn Structure
 
