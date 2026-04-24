@@ -21,6 +21,22 @@ from flop7.core.engine.requests import (
 
 
 # ---------------------------------------------------------------------------
+# Opening-round filler cards
+# ---------------------------------------------------------------------------
+
+OPENING_CARDS = [
+    Card(name="Opening A", abbrv="OA", num_in_deck=0, points=0, bustable=False),
+    Card(name="Opening B", abbrv="OB", num_in_deck=0, points=0, bustable=False),
+    Card(name="Opening C", abbrv="OC", num_in_deck=0, points=0, bustable=False),
+]
+
+
+def opening_cards(*player_indexes: int) -> list[Card]:
+    """Return zero-point filler cards for the given player indexes."""
+    return [OPENING_CARDS[i] for i in player_indexes]
+
+
+# ---------------------------------------------------------------------------
 # Deterministic draw callable
 # ---------------------------------------------------------------------------
 
@@ -116,19 +132,29 @@ def drive_round(
     gen = engine.round()
     events: list[Any] = []
 
+    def next_response(iterator, label: str):
+        try:
+            return next(iterator)
+        except StopIteration as exc:
+            raise AssertionError(f"Missing {label} response while driving round") from exc
+
     try:
         req = next(gen)
-        while True:
-            events.append(req)
+    except StopIteration:
+        return events
+
+    while True:
+        events.append(req)
+        try:
             if isinstance(req, HitStayRequest):
-                req = gen.send(next(hit_iter))
+                req = gen.send(next_response(hit_iter, "hit/stay"))
             elif isinstance(req, TargetRequest):
-                req = gen.send(next(target_iter))
+                req = gen.send(next_response(target_iter, "target"))
             elif isinstance(req, CardInputRequest):
-                req = gen.send(next(card_iter))
+                req = gen.send(next_response(card_iter, "card input"))
             else:
                 req = gen.send(None)
-    except StopIteration:
-        pass
+        except StopIteration:
+            break
 
     return events

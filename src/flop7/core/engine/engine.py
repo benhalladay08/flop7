@@ -79,6 +79,13 @@ class GameEngine:
     def round(self):
         """Generator for one round of play.
 
+        Each round begins with an opening deal: every player is dealt exactly
+        one card in seat order, and action cards resolve immediately as they
+        are dealt. This opening pass does not replace action cards that do not
+        remain in front of the player. After that, active players choose
+        whether to hit or stay; players with an empty hand are forced to draw
+        instead of receiving a hit/stay choice.
+
         Yields decision requests (``HitStayRequest``, ``CardInputRequest``,
         ``TargetRequest``) and notification events (``CardDrawnEvent``,
         ``PlayerBustedEvent``, ``RoundOverEvent``).
@@ -95,15 +102,23 @@ class GameEngine:
 
         self._flip7_player = None
 
-        while len(self.active_players) > 0:
+        # --- Opening deal: one mandatory card per player ---
+        for player in self.players:
+            card = yield from self._draw(player)
+            yield from self._hit(player, card)
+            if self._flip7_player is not None:
+                break
+
+        while self._flip7_player is None and len(self.active_players) > 0:
             for player in list(self.active_players):
                 if not player.is_active:
                     continue
 
-                hit = yield HitStayRequest(player=player)
-                if not hit:
-                    player.is_active = False
-                    continue
+                if player.hand:
+                    hit = yield HitStayRequest(player=player)
+                    if not hit:
+                        player.is_active = False
+                        continue
 
                 card = yield from self._draw(player)
                 yield from self._hit(player, card)
