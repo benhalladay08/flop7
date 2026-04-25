@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flop7.core.classes.cards import FLIP_THREE, FREEZE, SECOND_CHANCE
-from flop7.core.engine.requests import TargetRequest
+from flop7.core.engine.requests import (
+    FlipThreeResolvedEvent,
+    FlipThreeStartEvent,
+    FreezeEvent,
+    SecondChanceEvent,
+    TargetRequest,
+)
 from flop7.core.enum.decisions import TargetEvent
 from flop7.core.protocols.actions import CardAction
 
@@ -27,6 +33,7 @@ def flip_three(game: GameEngine, player: Player, card: Card):
     target = yield TargetRequest(
         event=TargetEvent.FLIP_THREE, source=player, eligible=eligible,
     )
+    yield FlipThreeStartEvent(source=player, target=target)
 
     deferred: list[Card] = []
     for _ in range(3):
@@ -47,6 +54,7 @@ def flip_three(game: GameEngine, player: Player, card: Card):
             game.deck.discard([d])
 
     game.deck.discard([card])
+    yield FlipThreeResolvedEvent(target=target)
 
 
 def freeze(game: GameEngine, player: Player, card: Card):
@@ -60,6 +68,7 @@ def freeze(game: GameEngine, player: Player, card: Card):
     )
     target.hand.append(card)
     target.is_active = False
+    yield FreezeEvent(source=player, target=target)
 
 
 def second_chance(game: GameEngine, player: Player, card: Card):
@@ -69,6 +78,7 @@ def second_chance(game: GameEngine, player: Player, card: Card):
     """
     if not player.has_card(SECOND_CHANCE):
         player.hand.append(card)
+        yield SecondChanceEvent(source=player, target=player)
         return
 
     eligible = [
@@ -87,6 +97,7 @@ def second_chance(game: GameEngine, player: Player, card: Card):
         return
 
     target.hand.append(card)
+    yield SecondChanceEvent(source=player, target=target)
 
 
 _ACTIONS: dict[str, CardAction] = {

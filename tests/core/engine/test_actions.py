@@ -15,8 +15,12 @@ from flop7.core.engine.actions import get_action, flip_three, freeze, second_cha
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
     CardDrawnEvent,
+    FlipThreeResolvedEvent,
+    FlipThreeStartEvent,
+    FreezeEvent,
     HitStayRequest,
     PlayerBustedEvent,
+    SecondChanceEvent,
     TargetRequest,
 )
 
@@ -241,6 +245,36 @@ class TestFreeze:
         )
         assert p2.score == 3
 
+    def test_freeze_yields_freeze_event_with_correct_players(self):
+        engine = _engine(opening_cards(0, 1, 2) + [FREEZE])
+        p1, p2, _ = engine.players
+
+        events = drive_round(
+            engine,
+            hit_responses=[True, False, False],
+            target_responses=[p2],
+        )
+
+        freeze_events = [e for e in events if isinstance(e, FreezeEvent)]
+        assert len(freeze_events) == 1
+        assert freeze_events[0].source is p1
+        assert freeze_events[0].target is p2
+
+    def test_freeze_event_emitted_after_target_deactivated(self):
+        engine = _engine(opening_cards(0, 1, 2) + [FREEZE])
+        _, p2, _ = engine.players
+
+        events = drive_round(
+            engine,
+            hit_responses=[True, False, False],
+            target_responses=[p2],
+        )
+
+        # FreezeEvent must come after the TargetRequest that selected p2
+        target_idx = next(i for i, e in enumerate(events) if isinstance(e, TargetRequest))
+        freeze_idx = next(i for i, e in enumerate(events) if isinstance(e, FreezeEvent))
+        assert freeze_idx > target_idx
+
 
 class TestSecondChance:
 
@@ -259,6 +293,36 @@ class TestSecondChance:
             if isinstance(event, TargetRequest) and event.event.name == "SECOND_CHANCE"
         ]
         assert sc_targets == []
+
+    def test_second_chance_self_assign_yields_event(self):
+        engine = _engine(opening_cards(0, 1, 2) + [SECOND_CHANCE])
+        p1, _, _ = engine.players
+
+        events = drive_round(
+            engine,
+            hit_responses=[True, False, False, False],
+        )
+
+        sc_events = [e for e in events if isinstance(e, SecondChanceEvent)]
+        assert len(sc_events) == 1
+        assert sc_events[0].source is p1
+        assert sc_events[0].target is p1
+
+    def test_second_chance_pass_yields_event_with_correct_target(self):
+        engine = _engine(opening_cards(0, 1, 2) + [SECOND_CHANCE])
+        p1, p2, _ = engine.players
+        p1.hand = [SECOND_CHANCE]
+
+        events = drive_round(
+            engine,
+            hit_responses=[True, False, False, False],
+            target_responses=[p2],
+        )
+
+        sc_events = [e for e in events if isinstance(e, SecondChanceEvent)]
+        assert len(sc_events) == 1
+        assert sc_events[0].source is p1
+        assert sc_events[0].target is p2
 
     def test_duplicate_second_chance_added_to_selected_eligible_player(self):
         engine = _engine(opening_cards(0, 1, 2) + [SECOND_CHANCE])
@@ -358,3 +422,71 @@ class TestSecondChance:
         bust_events = [event for event in events if isinstance(event, PlayerBustedEvent)]
         assert len(bust_events) == 0
         assert p1.score == 5
+
+
+class TestFlipThreeEvents:
+
+    def test_flip_three_start_event_yielded(self):
+        engine = _engine(opening_cards(0, 1, 2) + [FLIP_THREE, FIVE, THREE, SEVEN])
+        p1, p2, _ = engine.players
+
+        events = drive_round(
+            engine,
+            hit_responses=[True, False, False, False],
+            target_responses=[p2],
+        )
+
+        start_events = [e for e in events if isinstance(e, FlipThreeStartEvent)]
+        assert len(start_events) == 1
+        assert start_events[0].source is p1
+        assert start_events[0].target is p2
+
+    def test_flip_three_resolved_event_yielded(self):
+        engine = _engine(opening_cards(0, 1, 2) + [FLIP_THREE, FIVE, THREE, SEVEN])
+        _, p2, _ = engine.players
+
+        events = drive_round(
+            engine,
+            hit_responses=[True, False, False, False],
+            target_responses=[p2],
+        )
+
+        resolved_events = [e for e in events if isinstance(e, FlipThreeResolvedEvent)]
+        assert len(resolved_events) == 1
+        assert resolved_events[0].target is p2
+
+    def test_flip_three_start_before_draws_resolved_after(self):
+        engine = _engine(opening_cards(0, 1, 2) + [FLIP_THREE, FIVE, THREE, SEVEN])
+        _, p2, _ = engine.players
+
+        events = drive_round(
+            engine,
+            hit_responses=[True, False, False, False],
+            target_responses=[p2],
+        )
+
+        start_idx = next(i for i, e in enumerate(events) if isinstance(e, FlipThreeStartEvent))
+        resolved_idx = next(i for i, e in enumerate(events) if isinstance(e, FlipThreeResolvedEvent))
+        # The 3 forced draws all happen between FlipThreeStartEvent and FlipThreeResolvedEvent
+        forced_draw_idxs = [
+            i for i, e in enumerate(events)
+            if isinstance(e, CardDrawnEvent) and e.player is p2 and start_idx < i < resolved_idx
+        ]
+        assert len(forced_draw_idxs) == 3
+        assert start_idx < forced_draw_idxs[0]
+        assert resolved_idx > forced_draw_idxs[-1]
+
+    def test_flip_three_resolved_still_emitted_when_target_busts(self):
+        engine = _engine(opening_cards(0, 1, 2) + [FLIP_THREE, FIVE, THREE, SEVEN])
+        _, p2, _ = engine.players
+        p2.hand = [FIVE]
+
+        events = drive_round(
+            engine,
+            hit_responses=[True, False, False],
+            target_responses=[p2],
+        )
+
+        resolved_events = [e for e in events if isinstance(e, FlipThreeResolvedEvent)]
+        assert len(resolved_events) == 1
+        assert resolved_events[0].target is p2

@@ -7,9 +7,14 @@ from flop7.core.enum.decisions import TargetEvent
 from flop7.core.engine.requests import (
     CardDrawnEvent,
     CardInputRequest,
+    Flip7Event,
+    FlipThreeResolvedEvent,
+    FlipThreeStartEvent,
+    FreezeEvent,
     HitStayRequest,
     PlayerBustedEvent,
     RoundOverEvent,
+    SecondChanceEvent,
     TargetRequest,
 )
 
@@ -52,3 +57,29 @@ class TestRequestDataclasses:
     def test_round_over_event(self):
         e = RoundOverEvent(round_number=3)
         assert e.round_number == 3
+
+    def test_flip7_event(self, player):
+        e = Flip7Event(player=player)
+        assert e.player is player
+
+    def test_freeze_event(self, player):
+        other = Player("Other")
+        e = FreezeEvent(source=player, target=other)
+        assert e.source is player
+        assert e.target is other
+
+    def test_second_chance_event(self, player):
+        other = Player("Other")
+        e = SecondChanceEvent(source=player, target=other)
+        assert e.source is player
+        assert e.target is other
+
+    def test_flip_three_start_event(self, player):
+        other = Player("Other")
+        e = FlipThreeStartEvent(source=player, target=other)
+        assert e.source is player
+        assert e.target is other
+
+    def test_flip_three_resolved_event(self, player):
+        e = FlipThreeResolvedEvent(target=player)
+        assert e.target is player

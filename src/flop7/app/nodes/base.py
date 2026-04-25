@@ -10,7 +10,13 @@ class Node(ABC):
 
     Each node knows its prompt and how to compute the next node from
     validated user input.
+
+    Dispatcher nodes (``is_dispatcher = True``) have no prompt of their
+    own; the orchestrator calls ``dispatch()`` to resolve them to a real
+    child node before showing a prompt.
     """
+
+    is_dispatcher: bool = False
 
     @property
     @abstractmethod

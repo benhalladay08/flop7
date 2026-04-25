@@ -53,3 +53,30 @@ class RoundOverEvent:
 class Flip7Event:
     """Yield to notify that a player achieved Flip 7 (7 unique number cards)."""
     player: Player
+
+
+@dataclass
+class FreezeEvent:
+    """Yield to notify that a player has been frozen by a Freeze action."""
+    source: Player
+    target: Player
+
+
+@dataclass
+class SecondChanceEvent:
+    """Yield to notify that a Second Chance card was assigned to a player."""
+    source: Player
+    target: Player
+
+
+@dataclass
+class FlipThreeStartEvent:
+    """Yield to notify that a Flip Three sequence is beginning."""
+    source: Player
+    target: Player
+
+
+@dataclass
+class FlipThreeResolvedEvent:
+    """Yield to notify that a Flip Three sequence has finished resolving."""
+    target: Player

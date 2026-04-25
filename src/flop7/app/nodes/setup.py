@@ -253,13 +253,13 @@ class SetupCompleteNode(Node):
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        from flop7.app.nodes.game import GameLoopNode, _build_engine
+        from flop7.app.nodes.game import GameRoundNode, _build_engine
 
         engine = _build_engine(context)
         context["_engine"] = engine
         context["_show_game"] = engine
-        return GameLoopNode(
+        return GameRoundNode(
             engine,
             context["game_mode"],
-            context.get("_bot_controller"),
+            context["_bot_controller"],
         )
