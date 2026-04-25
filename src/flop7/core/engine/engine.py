@@ -81,10 +81,11 @@ class GameEngine:
     def round(self):
         """Generator for one round of play.
 
-        Each round begins with an opening deal: every player is dealt exactly
-        one card in seat order, and action cards resolve immediately as they
-        are dealt. This opening pass does not replace action cards that do not
-        remain in front of the player. After that, active players choose
+        Each round begins with an opening deal: every active player is dealt
+        exactly one card in seat order, and action cards resolve immediately
+        as they are dealt. Players frozen during the opening deal are skipped.
+        This opening pass does not replace action cards that do not remain in
+        front of the player. After that, active players choose
         whether to hit or stay; players with an empty hand are forced to draw
         instead of receiving a hit/stay choice.
 
@@ -102,7 +103,10 @@ class GameEngine:
         self._flip7_player = None
 
         # --- Opening deal: one mandatory card per player ---
+        # seperate loop as players must all recieve one card
         for player in self.players:
+            if not player.is_active:
+                continue
             card = yield from self._draw(player)
             yield from self._hit(player, card)
             if self._flip7_player is not None:

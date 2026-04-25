@@ -21,6 +21,7 @@ from flop7.core.classes.cards import (
     PLUS_FOUR,
     SECOND_CHANCE,
     FLIP_THREE,
+    FREEZE,
 )
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
@@ -32,7 +33,7 @@ from flop7.core.engine.requests import (
     RoundOverEvent,
 )
 
-from tests.conftest import drive_round, make_deck, make_engine, make_players, opening_cards
+from tests.conftest import OPENING_CARDS, drive_round, make_deck, make_engine, make_players, opening_cards
 
 
 class TestConstructor:
@@ -132,6 +133,51 @@ class TestRoundBasicFlow:
             (engine.players[2], TEN),
         ]
         assert drawn_events[6] == (p1, ELEVEN)
+
+
+class TestOpeningDealFreeze:
+
+    def test_frozen_player_skipped_during_opening_deal(self):
+        """A player frozen by a Freeze drawn during the opening deal
+        should NOT receive their own opening card."""
+        # P1 draws Freeze targeting P2 → P2 frozen before their turn.
+        # P3 gets dealt normally. P2 never draws.
+        # After opening: P1 has empty hand (force-draw), P3 has FIVE.
+        cards = [FREEZE, FIVE, THREE]
+        engine = make_engine(cards, n_players=3)
+        p1, p2, p3 = engine.players
+
+        events = drive_round(
+            engine,
+            hit_responses=[False, False],
+            target_responses=[p2],
+        )
+
+        drawn_events = [
+            (e.player, e.card) for e in events if isinstance(e, CardDrawnEvent)
+        ]
+        # Opening: P1→FREEZE, P3→FIVE. Main loop: P1 force-draws THREE.
+        assert drawn_events == [(p1, FREEZE), (p3, FIVE), (p1, THREE)]
+        # P2 never drew a card
+        assert not any(e.player is p2 for e in events if isinstance(e, CardDrawnEvent))
+
+    def test_frozen_player_still_scores_existing_hand(self):
+        """A player frozen during the opening deal keeps their hand score."""
+        # P1 gets opening card, P2 draws Freeze targeting P1.
+        # P1 is frozen with opening card + freeze card. P3 gets dealt.
+        # P2 draws Freeze (empty hand after), P3 gets opening card.
+        # Main loop: P2 force-draws THREE, then stays. P3 stays.
+        cards = [OPENING_CARDS[0], FREEZE, OPENING_CARDS[2], THREE]
+        engine = make_engine(cards, n_players=3)
+        p1, p2, p3 = engine.players
+
+        drive_round(
+            engine,
+            hit_responses=[False, False],
+            target_responses=[p1],
+        )
+        # P1 frozen with 0-point opening card + freeze (0 points)
+        assert p1.score == 0
 
 
 class TestBust:

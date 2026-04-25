@@ -47,7 +47,8 @@ The deck contains number cards from 0-12, with quantities matching their values:
 
 1. Dealer deals one card face-up to each player (including themselves)
 2. If an Action card appears, pause and resolve it immediately
-3. The opening deal ends once each player has been dealt exactly one card, even if that Action card does not remain in front of them
+3. If a player is frozen during the opening deal, they are skipped and do not receive an opening card
+4. The opening deal ends once each remaining active player has been dealt exactly one card, even if that Action card does not remain in front of them
 
 **Important:** After initial dealing, players may have different numbers of cards depending on Action cards dealt, and some players may start their first turn with no cards in front of them.
 
