@@ -20,15 +20,15 @@ Enter one of the following commands in the command bar to proceed.
 
 - simulate: Run a batch of virtual games to pit bots against each other.
 
-- quit: Quit the application.\
+- exit: Quit the application.\
 
 """
 
 
 def _home_validator(text: str) -> str | None:
-    if text.lower() in ("play", "simulate", "quit", "exit"):
+    if text.lower() in ("play", "simulate"):
         return None
-    return "Unknown command. Type 'play', 'simulate', or 'quit'."
+    return "Unknown command. Type 'play', 'simulate', or 'exit'."
 
 
 class HomeNode(Node):
@@ -43,9 +43,6 @@ class HomeNode(Node):
         from flop7.app.nodes.setup import GameModeNode  # avoid circular import
 
         cmd = value.lower()
-        if cmd in ("quit", "exit"):
-            context["_quit"] = True
-            return None
         if cmd == "play":
             return GameModeNode()
         if cmd == "simulate":

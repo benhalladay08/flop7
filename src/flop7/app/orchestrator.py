@@ -17,10 +17,6 @@ class App:
     def _handle_input(self, value: str) -> None:
         next_node = self._current_node.on_input(value, self.context)
 
-        if self.context.get("_quit"):
-            self.tui.exit()
-            return
-
         # --- Screen transitions requested by nodes ---
         if "_show_game" in self.context:
             engine = self.context.pop("_show_game")

@@ -55,6 +55,12 @@ class CommandBar(urwid.WidgetWrap):
         if key == "enter":
             text = self._edit.edit_text.strip()
             self._edit.edit_text = ""
+
+            if text.lower() == "exit":
+                self._set_error(None)
+                urwid.emit_signal(self, "submitted", text)
+                return None
+
             error = self._validator(text)
             if error is not None:
                 self._set_error(error)
