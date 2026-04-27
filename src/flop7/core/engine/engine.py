@@ -213,7 +213,7 @@ class GameEngine:
         return sum(1 for c in player.hand if c.bustable) >= self.FLIP_7_COUNT
 
     def _pre_hit(self, player: Player, card: Card) -> bool:
-        """Second Chance absorption check."""
+        """Pre hit hook, contains Second Chance absorption check."""
         if player.has_card(SECOND_CHANCE) and card.bustable and player.has_card(card):
             sc = next(c for c in player.hand if c.name == SECOND_CHANCE.name)
             player.hand.remove(sc)
