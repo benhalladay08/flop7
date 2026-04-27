@@ -421,7 +421,7 @@ class PlayerView
 class DeckView
 
 class Bot {
-  +avaliable_bots : dict
+  +available_bots : dict
   +create(model, virtual=False, **params) : AbstractBot
 }
 

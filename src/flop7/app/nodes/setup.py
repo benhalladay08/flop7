@@ -10,7 +10,7 @@ from flop7.bot.registry import Bot
 def _available_bot_names(game_mode: str) -> list[str]:
     """Return bot model names valid for the given game mode."""
     names = []
-    for name, cls in Bot.avaliable_bots.items():
+    for name, cls in Bot.available_bots.items():
         if game_mode == "virtual" or not cls.virtual_only:
             names.append(name)
     return names
@@ -211,7 +211,7 @@ class BotTypeNode(Node):
             lines.append(f"{i}. {t}")
         lines.append(f"\nSelect the model for bot {self._index} of {self._total}:")
         lines.append("\nAvailable models:")
-        for name, cls in Bot.avaliable_bots.items():
+        for name, cls in Bot.available_bots.items():
             if name in self._valid_names:
                 tag = " (virtual only)" if cls.virtual_only else ""
                 lines.append(f"  - {name}{tag}")

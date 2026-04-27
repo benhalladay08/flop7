@@ -19,7 +19,7 @@ from flop7.bot.registry import Bot
 def _available_bot_names() -> list[str]:
     """Bot names available for simulation (virtual mode, instantiable only)."""
     names = []
-    for name in Bot.avaliable_bots:
+    for name in Bot.available_bots:
         try:
             Bot.create(name, virtual=True)
             names.append(name)
