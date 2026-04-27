@@ -54,7 +54,7 @@ class TestBuildGameView:
         assert view.real_mode is True
         assert view.deck.draw_order == ()
         assert view.deck.next_card is None
-        assert view.deck.remaining_count == 0
+        assert view.deck.remaining_count is None
         assert view.deck.discard_pile == (TEN,)
 
     def test_winner_index_is_snapshotted(self):

@@ -36,11 +36,8 @@ class DeckView:
     """Read-only snapshot of known deck state."""
 
     draw_order: tuple[Card, ...]
+    remaining_count: int | None
     discard_pile: tuple[Card, ...]
-
-    @property
-    def remaining_count(self) -> int:
-        return len(self.draw_order)
 
     @property
     def discard_count(self) -> int:
@@ -92,8 +89,10 @@ def build_player_view(index: int, player: Player) -> PlayerView:
 
 
 def build_deck_view(deck: Deck, reveal_draw_order: bool) -> DeckView:
+    draw_order = tuple(deck.draw_pile) if reveal_draw_order else ()
     return DeckView(
-        draw_order=tuple(deck.draw_pile) if reveal_draw_order else (),
+        draw_order=draw_order,
+        remaining_count=len(draw_order) if reveal_draw_order else None,
         discard_pile=tuple(deck.discard_pile),
     )
 
