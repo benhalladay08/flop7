@@ -437,3 +437,45 @@ class TestFlip7:
         player = engine.players[0]
         player.hand = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX]
         assert engine._has_flip7(player) is True
+
+
+class TestPlayListeners:
+
+    @staticmethod
+    def _always_stay_engine():
+        """Engine with a full deck where all players always stay."""
+        from flop7.core.classes.deck import Deck
+        players = make_players(3)
+        return GameEngine(
+            Deck(), players,
+            hit_stay_decider=lambda game, player: False,
+            target_selector=lambda game, event, player, eligible: eligible[0],
+        )
+
+    def test_listeners_receive_all_yielded_events(self):
+        engine = self._always_stay_engine()
+        log = []
+        engine.play(listeners=[log.append])
+        assert len(log) > 0
+        assert any(isinstance(e, CardDrawnEvent) for e in log)
+        assert any(isinstance(e, RoundOverEvent) for e in log)
+
+    def test_listeners_called_before_engine_responds(self):
+        """Each listener fires before the engine sends its response."""
+        engine = self._always_stay_engine()
+        order = []
+        engine.play(listeners=[lambda e: order.append(type(e).__name__)])
+        # First events should be CardDrawnEvent from opening deal
+        assert order[0] == "CardDrawnEvent"
+
+    def test_multiple_listeners_all_called(self):
+        engine = self._always_stay_engine()
+        log_a, log_b = [], []
+        engine.play(listeners=[log_a.append, log_b.append])
+        assert len(log_a) == len(log_b)
+        assert len(log_a) > 0
+
+    def test_no_listeners_is_default(self):
+        engine = self._always_stay_engine()
+        engine.play()
+        assert engine.game_over

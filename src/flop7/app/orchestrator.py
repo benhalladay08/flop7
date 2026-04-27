@@ -26,8 +26,12 @@ class App:
             engine = self.context.pop("_show_game")
             self.context["_game_screen"] = self.tui.show_game(engine)
 
+        if self.context.pop("_show_simulate", False):
+            self.context["_sim_screen"] = self.tui.show_simulate()
+
         if self.context.pop("_show_home", False):
             self.context.pop("_game_screen", None)
+            self.context.pop("_sim_screen", None)
             self.tui.show_home()
 
         if next_node is not None:

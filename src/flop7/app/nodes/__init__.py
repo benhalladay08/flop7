@@ -22,6 +22,14 @@ from flop7.app.nodes.game import (
     SpecialResolvedNode,
     TargetSelectNode,
 )
+from flop7.app.nodes.simulate import (
+    SimBotConfigNode,
+    SimConfirmNode,
+    SimDoneNode,
+    SimGameCountNode,
+    SimPlayerCountNode,
+    SimRunNode,
+)
 
 __all__ = [
     "Node",
@@ -44,4 +52,10 @@ __all__ = [
     "Flip7Node",
     "SpecialResolvedNode",
     "RoundOverNode",
+    "SimPlayerCountNode",
+    "SimBotConfigNode",
+    "SimGameCountNode",
+    "SimConfirmNode",
+    "SimRunNode",
+    "SimDoneNode",
 ]

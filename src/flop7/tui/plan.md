@@ -57,16 +57,24 @@ A `WidgetWrap` containing a `Pile` of three zones:
 
 ---
 
-## Orchestrator Decision Tree (`app/nodes.py`)
+## Orchestrator Decision Tree (`app/nodes/`)
 
-Each `Node` subclass defines one step in the flow:
+Nodes live in `app/nodes/` as a package. Each `Node` subclass defines one step:
 
 | Node | Instruction | Transitions to |
 |------|-------------|---------------|
-| `HomeNode` | "Type 'play', 'simulate', or 'quit'." | `PlayerCountNode`, quit |
-| `PlayerCountNode` | "How many players? (3–6)" | `PlayerNameNode` |
-| `PlayerNameNode` | "Enter name for Player N of M:" | loops → `SetupCompleteNode` |
-| `SetupCompleteNode` | "Setup complete! Type 'home' to return." | `HomeNode` |
+| `HomeNode` | Welcome text + command list | `GameModeNode`, quit |
+| `GameModeNode` | "virtual or real?" | `PlayerCountNode` |
+| `PlayerCountNode` | "How many human players? (1–10)" | `PlayerNameNode` |
+| `PlayerNameNode` | Roster with blank slots, fills as names entered | loops → `BotCountNode` or `SetupCompleteNode` |
+| `BotCountNode` | "How many bots? (min–max)" with constraint explanation | `BotTypeNode` or `SetupCompleteNode` |
+| `BotTypeNode` | Bot roster with blank slots + available models list | loops → `SetupCompleteNode` |
+| `SetupCompleteNode` | Placeholder until game start is wired | `HomeNode` |
+
+Rules enforced by nodes:
+- 10 human players → skip bot steps entirely
+- Fewer than 3 humans → minimum bot count enforced
+- `real` game mode → virtual-only bot models excluded from the list
 
 Nodes receive already-validated input (the `CommandBar` ran the validator first). The orchestrator (`app/orchestrator.py`) drives the loop: calls `node.on_input()`, gets the next node, pushes its prompt to the TUI.
 
@@ -80,9 +88,49 @@ Screens are plain classes returning an urwid widget tree. The `TUIApp` holds the
 
 Displayed on launch. ASCII logo + tagline, vertically centered.
 
-### 2–6. Future Screens
+### 2. Game Screen (`screens/game.py`) — planned
 
-Game setup, game view, simulation configurator, runner, and results — to be implemented as separate screens triggered by node transitions in the orchestrator.
+The game screen has two layout modes, selected at render time based on terminal width (threshold TBD, ~120 cols).
+
+#### Compact mode (narrow terminal)
+
+A single scrollable `ListBox` of player rows. Each row fits on one or two lines:
+
+```
+  Player        Cards                          Score  Status
+─────────────────────────────────────────────────────────────
+▸ Alice    [3] [7] [11] [+4] [×2]              42    Active
+  Bob      [1] [5] [9] [12] [SC]               27    Stayed
+  Charlie  [8] [8] ← BUST                       0    Busted
+```
+
+Cards use abbreviated inline notation: `[12]`, `[+4]`, `[×2]`, `[SC]`, `[F3]`, `[FZ]`. The active player gets an arrow indicator and palette highlight. All players are visible simultaneously; scrolling only needed with 10 players on a very small terminal.
+
+#### Wide mode (large terminal)
+
+A `Columns` layout: compact player list on the left, ASCII art card detail for the focused player on the right.
+
+```
+┌─ Players ────────────┬─ Alice (Active) ─────────────────────────┐
+│ ▸ Alice    42  Act   │                                          │
+│   Bob      27  Stay  │  ╔═══╗  ╔═══╗  ╔═══╗  ╔═══╗            │
+│   Charlie   0  Bust  │  ║ 3 ║  ║ 7 ║  ║11 ║  ║+4 ║            │
+│                      │  ╚═══╝  ╚═══╝  ╚═══╝  ╚═══╝            │
+└──────────────────────┴──────────────────────────────────────────┘
+```
+
+The detail pane shows the focused (active) player's full hand using large ASCII art cards. Card art is defined per card in `tui/ascii/cards/` as `.txt` files (one per card: `0.txt` through `12.txt`, `plus2.txt`…`plus10.txt`, `sc.txt`, `f3.txt`, `fz.txt`). All cards share the same fixed dimensions so they tile cleanly in a horizontal flow with wrapping.
+
+**Resize handling**: urwid reports terminal size on each render pass. The screen checks `cols` at render time and returns either the compact or wide widget tree. No polling or signal needed — it's just a conditional in the body widget's `render` method.
+
+**Planned widgets for this screen**:
+- `PlayerListWidget` — shared between both modes; narrow columns in wide mode, full columns in compact
+- `CardDetailPane` — wide mode only; renders ASCII card art for one player's hand with horizontal flow and line wrapping
+- `GameScreen` — assembles the layout, owns the resize check
+
+### 3–6. Future Screens
+
+Simulation configurator, runner, and results — to be implemented as separate screens triggered by node transitions in the orchestrator.
 
 ---
 
@@ -96,11 +144,15 @@ tui/
 ├── screens/
 │   ├── __init__.py
 │   ├── home.py          ← Home screen (ASCII logo)
-│   └── ...              ← future screens
-└── widgets/
-    ├── __init__.py
-    ├── command_bar.py   ← 3-zone command bar (instruction/input/error)
-    └── ...              ← future widgets (player_box, scoreboard, etc.)
+│   ├── game.py          ← Game screen (compact + wide modes)  [planned]
+│   └── ...              ← simulation screens  [planned]
+├── widgets/
+│   ├── __init__.py
+│   ├── command_bar.py   ← 3-zone command bar (instruction/input/error)
+│   ├── player_list.py   ← scrollable player roster widget  [planned]
+│   └── card_detail.py   ← ASCII card art pane for wide mode  [planned]
+└── ascii/
+    └── cards/           ← one .txt file per card face  [planned]
 ```
 
 ---
@@ -115,5 +167,8 @@ palette = [
     ("instruction", "light cyan",      ""),
     ("command",     "white",           ""),
     ("error",       "light red",       ""),
+    ("active",      "bold",            ""),   # active player highlight
+    ("dimmed",      "dark gray",       ""),   # stayed/busted players
+    ("busted",      "light red",       ""),   # bust indicator
 ]
 ```

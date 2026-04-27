@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from flop7.core.classes.cards import Card, SECOND_CHANCE
 from flop7.core.classes.deck import Deck
 from flop7.core.classes.player import Player
@@ -55,14 +57,21 @@ class GameEngine:
         """Players still in the current round (haven't stayed or frozen)."""
         return [p for p in self.players if p.is_active]
     
-    def play(self) -> None:
+    def play(self, listeners: list[Callable] | None = None) -> None:
         """Main game loop. Auto-drives the round generator using the
-        engine's callables. Continues until a player reaches WIN_SCORE."""
+        engine's callables. Continues until a player reaches WIN_SCORE.
+
+        If *listeners* is provided, each callable is invoked with every
+        yielded request or event before the engine responds to it.
+        """
+        _listeners = listeners or ()
         while not self.game_over:
             gen = self.round()
             req = next(gen)
             while True:
                 try:
+                    for fn in _listeners:
+                        fn(req)
                     if isinstance(req, HitStayRequest):
                         req = gen.send(self.hit_stay_decider(self, req.player))
                     elif isinstance(req, TargetRequest):

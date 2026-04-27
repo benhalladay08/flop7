@@ -48,5 +48,9 @@ class HomeNode(Node):
             return None
         if cmd == "play":
             return GameModeNode()
-        # TODO: simulate path
+        if cmd == "simulate":
+            from flop7.app.nodes.simulate import SimPlayerCountNode
+
+            context["_show_simulate"] = True
+            return SimPlayerCountNode()
         return None

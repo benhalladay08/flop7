@@ -6,6 +6,7 @@ import urwid
 
 from flop7.tui.screens.game import GameScreen
 from flop7.tui.screens.home import HomeScreen
+from flop7.tui.screens.simulate import SimulateScreen
 from flop7.tui.widgets.command_bar import CommandBar
 
 if TYPE_CHECKING:
@@ -68,6 +69,12 @@ class TUIApp:
     def show_game(self, engine, focused_idx: int = 0) -> GameScreen:
         """Switch to the game screen and return it for later updates."""
         screen = GameScreen(engine=engine, focused_idx=focused_idx)
+        self.set_screen(screen)
+        return screen
+
+    def show_simulate(self) -> SimulateScreen:
+        """Switch to the simulate screen and return it for later updates."""
+        screen = SimulateScreen()
         self.set_screen(screen)
         return screen
 
