@@ -19,6 +19,14 @@ if TYPE_CHECKING:
     from flop7.core.engine.engine import GameEngine
 
 
+def _validate_target(event: TargetEvent, target: Player, eligible: list[Player]) -> None:
+    """Fail fast if a target response no longer matches the legal target set."""
+    if not any(target is player for player in eligible):
+        raise ValueError(f"{event.name} target must be one of the eligible players.")
+    if not target.is_active:
+        raise ValueError(f"{event.name} target is no longer active.")
+
+
 def flip_three(game: GameEngine, player: Player, card: Card):
     """
     Flip Three action: Target any active player — they must accept the next
@@ -33,6 +41,7 @@ def flip_three(game: GameEngine, player: Player, card: Card):
     target = yield TargetRequest(
         event=TargetEvent.FLIP_THREE, source=player, eligible=eligible,
     )
+    _validate_target(TargetEvent.FLIP_THREE, target, eligible)
     yield FlipThreeStartEvent(source=player, target=target)
 
     deferred: list[Card] = []
@@ -66,6 +75,7 @@ def freeze(game: GameEngine, player: Player, card: Card):
     target = yield TargetRequest(
         event=TargetEvent.FREEZE, source=player, eligible=eligible,
     )
+    _validate_target(TargetEvent.FREEZE, target, eligible)
     target.hand.append(card)
     target.is_active = False
     yield FreezeEvent(source=player, target=target)

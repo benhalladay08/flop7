@@ -49,6 +49,15 @@ def _engine(cards, n_players=3):
     return GameEngine(deck, players, hit_stay, target)
 
 
+def _advance_to_target_request(engine):
+    """Drive a round to its first action target request."""
+    gen = engine.round()
+    req = next(gen)
+    while not isinstance(req, TargetRequest):
+        req = gen.send(True if isinstance(req, HitStayRequest) else None)
+    return gen, req
+
+
 class TestActionRegistry:
 
     @pytest.mark.parametrize("card,handler", ACTION_HANDLERS)
@@ -208,6 +217,35 @@ class TestFlipThree:
         ]
         assert drawn_for_p1[1:] == [FLIP_THREE, FIVE, THREE, SEVEN]
 
+    def test_flip_three_invalid_target_raises_without_forced_draws(self):
+        cards = opening_cards(0, 1, 2)
+        engine = _engine(cards + [FLIP_THREE, FIVE, THREE, SEVEN])
+        outsider = make_players(1)[0]
+        gen, req = _advance_to_target_request(engine)
+
+        assert outsider not in req.eligible
+        with pytest.raises(ValueError, match="FLIP_THREE target"):
+            gen.send(outsider)
+
+        assert outsider.hand == []
+        assert engine.deck.draw_pile == [FIVE, THREE, SEVEN]
+        assert FLIP_THREE not in engine.deck.discard_pile
+
+    def test_flip_three_target_revalidated_after_request(self):
+        cards = opening_cards(0, 1, 2)
+        engine = _engine(cards + [FLIP_THREE, FIVE, THREE, SEVEN])
+        _, p2, _ = engine.players
+        gen, req = _advance_to_target_request(engine)
+
+        assert p2 in req.eligible
+        p2.is_active = False
+        with pytest.raises(ValueError, match="no longer active"):
+            gen.send(p2)
+
+        assert p2.hand == [cards[1]]
+        assert engine.deck.draw_pile == [FIVE, THREE, SEVEN]
+        assert FLIP_THREE not in engine.deck.discard_pile
+
 
 class TestFreeze:
 
@@ -274,6 +312,35 @@ class TestFreeze:
         target_idx = next(i for i, e in enumerate(events) if isinstance(e, TargetRequest))
         freeze_idx = next(i for i, e in enumerate(events) if isinstance(e, FreezeEvent))
         assert freeze_idx > target_idx
+
+    def test_freeze_invalid_target_raises_without_mutating_target(self):
+        cards = opening_cards(0, 1, 2)
+        engine = _engine(cards + [FREEZE])
+        outsider = make_players(1)[0]
+        gen, req = _advance_to_target_request(engine)
+
+        assert outsider not in req.eligible
+        with pytest.raises(ValueError, match="FREEZE target"):
+            gen.send(outsider)
+
+        assert outsider.hand == []
+        assert outsider.is_active is True
+        assert FREEZE not in engine.deck.discard_pile
+
+    def test_freeze_target_revalidated_after_request(self):
+        cards = opening_cards(0, 1, 2)
+        engine = _engine(cards + [FREEZE])
+        _, p2, _ = engine.players
+        gen, req = _advance_to_target_request(engine)
+
+        assert p2 in req.eligible
+        p2.is_active = False
+        with pytest.raises(ValueError, match="no longer active"):
+            gen.send(p2)
+
+        assert p2.hand == [cards[1]]
+        assert FREEZE not in p2.hand
+        assert FREEZE not in engine.deck.discard_pile
 
 
 class TestSecondChance:
