@@ -34,9 +34,12 @@ class GameEngine:
         hit_stay_decider: HitStay,
         target_selector: TargetSelector,
         real_mode: bool = False,
+        dealer_index: int = 0,
     ):
         if len(players) < 3:
             raise ValueError("Flip 7 requires at least 3 players.")
+        if dealer_index < 0 or dealer_index >= len(players):
+            raise ValueError("dealer_index must reference an existing player.")
 
         self.deck = deck
         self.players = players
@@ -44,6 +47,7 @@ class GameEngine:
         self.hit_stay_decider = hit_stay_decider
         self.target_selector = target_selector
         self.real_mode = real_mode
+        self.dealer_index = dealer_index
         self.round_number: int = 0
 
         # --- Endgame state ---
@@ -57,7 +61,12 @@ class GameEngine:
     def active_players(self) -> list[Player]:
         """Players still in the current round (haven't stayed or frozen)."""
         return [p for p in self.players if p.is_active]
-    
+
+    @property
+    def dealer(self) -> Player:
+        """Player currently holding the deck."""
+        return self.players[self.dealer_index]
+
     def play(
         self,
         listeners: list[Callable] | None = None,
@@ -116,8 +125,7 @@ class GameEngine:
         self._flip7_player = None
 
         # --- Opening deal: one mandatory card per player ---
-        # seperate loop as players must all recieve one card
-        for player in self.players:
+        for player in self._players_in_turn_order():
             if not player.is_active:
                 continue
             card = yield from self._draw(player)
@@ -126,7 +134,7 @@ class GameEngine:
                 break
 
         while self._flip7_player is None and len(self.active_players) > 0:
-            for player in list(self.active_players):
+            for player in self._players_in_turn_order():
                 if not player.is_active:
                     continue
 
@@ -161,9 +169,15 @@ class GameEngine:
             self.game_over = True
             self.winner = max(self.players, key=lambda p: p.score)
 
+        self.dealer_index = (self.dealer_index + 1) % len(self.players)
         yield RoundOverEvent(round_number=self.round_number)
 
     # --- round generator helpers --------------------------------------
+
+    def _players_in_turn_order(self) -> list[Player]:
+        """Players ordered from the dealer's left, wrapping around."""
+        start = (self.dealer_index + 1) % len(self.players)
+        return self.players[start:] + self.players[:start]
 
     def _draw(self, player: Player):
         """Yield a draw request and notify once the driver provides a card."""

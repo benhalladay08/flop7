@@ -32,6 +32,16 @@ class TestBuildGameView:
         assert view.players[1].busted is True
         assert view.active_player_indexes == (0, 2)
         assert [p.index for p in view.active_players] == [0, 2]
+        assert view.dealer_index == 0
+        assert view.dealer is view.players[0]
+
+    def test_dealer_state_is_snapshotted(self):
+        engine = make_engine([FIVE, THREE, SEVEN], n_players=3, dealer_index=2)
+
+        view = build_game_view(engine)
+
+        assert view.dealer_index == 2
+        assert view.dealer is view.players[2]
 
     def test_virtual_view_exposes_full_draw_order(self):
         engine = make_engine([FIVE, THREE, SEVEN], n_players=3)

@@ -58,6 +58,7 @@ def make_engine(
     target_responses: list[Player] | None = None,
     card_provider: Callable[[GameEngine, Player], Card] | None = None,
     real_mode: bool = False,
+    dealer_index: int = 0,
 ) -> GameEngine:
     """Build a GameEngine with deterministic deck and stub callables."""
     deck = make_deck(cards)
@@ -87,6 +88,7 @@ def make_engine(
         hit_stay_decider=hit_stay,
         target_selector=target_selector,
         real_mode=real_mode,
+        dealer_index=dealer_index,
     )
     return engine
 

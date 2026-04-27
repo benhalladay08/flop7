@@ -37,7 +37,7 @@ NON_ACTION_CARDS = [card for card in ALL_CARDS if card.abbrv not in ACTION_ABBRV
 
 
 def _engine(cards, n_players=3):
-    """Build a GameEngine with a deterministic deck for action tests."""
+    """Build a GameEngine with P1 first in turn order for action tests."""
     deck = make_deck(cards)
     players = make_players(n_players)
 
@@ -50,7 +50,14 @@ def _engine(cards, n_players=3):
     def card_provider(game, player):
         return game.deck.deal()
 
-    return GameEngine(deck, players, card_provider, hit_stay, target)
+    return GameEngine(
+        deck,
+        players,
+        card_provider,
+        hit_stay,
+        target,
+        dealer_index=n_players - 1,
+    )
 
 
 def _advance_to_target_request(engine):

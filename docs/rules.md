@@ -72,7 +72,7 @@ Each number card's **count in the deck equals its face value**, except 0 which h
 
 ### Starting a Round
 
-1. The dealer deals one card face-up to each player (including themselves), going around the table.
+1. The dealer deals one card face-up to each player (including themselves), starting with the player to the dealer's left and ending with themselves.
 2. If an **Action card** is dealt, pause and resolve it immediately before continuing.
 3. If a player is frozen during the opening deal (e.g. by a Freeze card resolved earlier in the deal), they are **skipped** and do not receive an opening card.
 4. The opening deal ends once each remaining active player has been dealt exactly one card, even if that card was an Action card that does not remain in front of them.
@@ -81,7 +81,7 @@ Each number card's **count in the deck equals its face value**, except 0 which h
 
 ### Turn Structure
 
-Each active player in turn order chooses:
+Each active player in turn order, starting with the player to the dealer's left, chooses:
 
 | Choice | Condition | Effect |
 |---|---|---|

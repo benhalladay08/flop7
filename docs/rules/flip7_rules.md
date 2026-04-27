@@ -45,7 +45,7 @@ The deck contains number cards from 0-12, with quantities matching their values:
 
 ### Starting a Round
 
-1. Dealer deals one card face-up to each player (including themselves)
+1. Dealer deals one card face-up to each player (including themselves), starting with the player to the dealer's left and ending with themselves
 2. If an Action card appears, pause and resolve it immediately
 3. If a player is frozen during the opening deal, they are skipped and do not receive an opening card
 4. The opening deal ends once each remaining active player has been dealt exactly one card, even if that Action card does not remain in front of them
@@ -54,7 +54,7 @@ The deck contains number cards from 0-12, with quantities matching their values:
 
 ### Taking Turns
 
-The dealer offers each player in turn order the choice to:
+The dealer offers each player in turn order, starting with the player to the dealer's left, the choice to:
 
 - **Hit:** Receive another card from the deck
 - **Stay:** Exit the round and bank current points (must have at least one card)

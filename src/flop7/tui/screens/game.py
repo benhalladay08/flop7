@@ -71,6 +71,7 @@ class GameScreen(urwid.WidgetWrap):
         return PlayerListWidget(
             self._players,
             focused_idx=self._focused_idx,
+            dealer_idx=self._engine.dealer_index,
             compact=False,
         )
 
@@ -82,6 +83,7 @@ class GameScreen(urwid.WidgetWrap):
         player_list = PlayerListWidget(
             self._players,
             focused_idx=self._focused_idx,
+            dealer_idx=self._engine.dealer_index,
             compact=True,
         )
 

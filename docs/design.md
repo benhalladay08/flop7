@@ -192,12 +192,14 @@ package "core.engine" {
   class GameEngine {
     +deck : Deck
     +players : list[Player]
+    +dealer_index : int
     +round_number : int
     +game_over : bool
     +winner : Player | None
     -hit_stay_decider : HitStay
     -target_selector : TargetSelector
     +active_players : list[Player]  <<property>>
+    +dealer : Player  <<property>>
     +play() : None
     +round() : None
     +hit(player: Player, card: Card) : None

@@ -72,6 +72,21 @@ class TestConstructor:
         assert engine.round_number == 0
         assert engine.game_over is False
         assert engine.winner is None
+        assert engine.dealer_index == 0
+        assert engine.dealer is engine.players[0]
+
+    def test_invalid_dealer_index_raises(self):
+        with pytest.raises(ValueError, match="dealer_index"):
+            make_engine([], n_players=3, dealer_index=3)
+
+    def test_custom_dealer_changes_turn_order(self):
+        engine = make_engine(opening_cards(0, 1, 2), n_players=3, dealer_index=2)
+        gen = engine.round()
+
+        req = next(gen)
+
+        assert isinstance(req, CardDrawRequest)
+        assert req.player is engine.players[0]
 
 
 class TestActivePlayers:
@@ -96,14 +111,6 @@ class TestRoundBasicFlow:
 
         req = next(gen)
         assert isinstance(req, CardDrawRequest)
-        assert req.player is engine.players[0]
-
-        req = gen.send(engine.deck.deal())
-        assert isinstance(req, CardDrawnEvent)
-        assert req.player is engine.players[0]
-
-        req = gen.send(None)
-        assert isinstance(req, CardDrawRequest)
         assert req.player is engine.players[1]
 
         req = gen.send(engine.deck.deal())
@@ -117,10 +124,18 @@ class TestRoundBasicFlow:
         req = gen.send(engine.deck.deal())
         assert isinstance(req, CardDrawnEvent)
         assert req.player is engine.players[2]
+
+        req = gen.send(None)
+        assert isinstance(req, CardDrawRequest)
+        assert req.player is engine.players[0]
+
+        req = gen.send(engine.deck.deal())
+        assert isinstance(req, CardDrawnEvent)
+        assert req.player is engine.players[0]
 
         req = gen.send(None)
         assert isinstance(req, HitStayRequest)
-        assert req.player is engine.players[0]
+        assert req.player is engine.players[1]
 
     def test_stay_makes_player_inactive(self):
         engine = make_engine(opening_cards(0, 1, 2), n_players=3)
@@ -135,13 +150,13 @@ class TestRoundBasicFlow:
         drawn_events = [e for e in events if isinstance(e, CardDrawnEvent)]
         assert len(drawn_events) == 4
         assert drawn_events[-1].card is FIVE
-        assert drawn_events[-1].player is engine.players[0]
+        assert drawn_events[-1].player is engine.players[1]
 
     def test_opening_deal_still_ends_after_one_card_per_player(self):
         """An opening action card does not grant a replacement opening card."""
         cards = [FLIP_THREE, FIVE, THREE, SEVEN, NINE, TEN, ELEVEN]
         engine = make_engine(cards, n_players=3)
-        p1, p2, _ = engine.players
+        p1, p2, p3 = engine.players
 
         events = drive_round(
             engine,
@@ -154,15 +169,14 @@ class TestRoundBasicFlow:
             for event in events
             if isinstance(event, CardDrawnEvent)
         ]
-        assert drawn_events[:6] == [
-            (p1, FLIP_THREE),
+        assert drawn_events == [
+            (p2, FLIP_THREE),
             (p2, FIVE),
             (p2, THREE),
             (p2, SEVEN),
-            (p2, NINE),
-            (engine.players[2], TEN),
+            (p3, NINE),
+            (p1, TEN),
         ]
-        assert drawn_events[6] == (p1, ELEVEN)
 
 
 class TestOpeningDealFreeze:
@@ -170,9 +184,9 @@ class TestOpeningDealFreeze:
     def test_frozen_player_skipped_during_opening_deal(self):
         """A player frozen by a Freeze drawn during the opening deal
         should NOT receive their own opening card."""
-        # P1 draws Freeze targeting P2 → P2 frozen before their turn.
-        # P3 gets dealt normally. P2 never draws.
-        # After opening: P1 has empty hand (force-draw), P3 has FIVE.
+        # P2 draws Freeze targeting P3 → P3 frozen before their turn.
+        # P1 gets dealt normally. P3 never draws.
+        # After opening: P2 has empty hand (force-draw), P1 has FIVE.
         cards = [FREEZE, FIVE, THREE]
         engine = make_engine(cards, n_players=3)
         p1, p2, p3 = engine.players
@@ -180,23 +194,21 @@ class TestOpeningDealFreeze:
         events = drive_round(
             engine,
             hit_responses=[False, False],
-            target_responses=[p2],
+            target_responses=[p3],
         )
 
         drawn_events = [
             (e.player, e.card) for e in events if isinstance(e, CardDrawnEvent)
         ]
-        # Opening: P1→FREEZE, P3→FIVE. Main loop: P1 force-draws THREE.
-        assert drawn_events == [(p1, FREEZE), (p3, FIVE), (p1, THREE)]
-        # P2 never drew a card
-        assert not any(e.player is p2 for e in events if isinstance(e, CardDrawnEvent))
+        # Opening: P2→FREEZE, P1→FIVE. Main loop: P2 force-draws THREE.
+        assert drawn_events == [(p2, FREEZE), (p1, FIVE), (p2, THREE)]
+        assert not any(e.player is p3 for e in events if isinstance(e, CardDrawnEvent))
 
     def test_frozen_player_still_scores_existing_hand(self):
         """A player frozen during the opening deal keeps their hand score."""
-        # P1 gets opening card, P2 draws Freeze targeting P1.
-        # P1 is frozen with opening card + freeze card. P3 gets dealt.
-        # P2 draws Freeze (empty hand after), P3 gets opening card.
-        # Main loop: P2 force-draws THREE, then stays. P3 stays.
+        # P2 gets opening card, P3 draws Freeze targeting P2.
+        # P2 is frozen with opening card. P1 gets dealt.
+        # Main loop: P3 force-draws THREE, then stays. P1 stays.
         cards = [OPENING_CARDS[0], FREEZE, OPENING_CARDS[2], THREE]
         engine = make_engine(cards, n_players=3)
         p1, p2, p3 = engine.players
@@ -204,30 +216,29 @@ class TestOpeningDealFreeze:
         drive_round(
             engine,
             hit_responses=[False, False],
-            target_responses=[p1],
+            target_responses=[p2],
         )
-        # P1 frozen with 0-point opening card + freeze (0 points)
-        assert p1.score == 0
+        assert p2.score == 0
 
 
 class TestBust:
 
     def test_duplicate_number_causes_bust(self):
         engine = make_engine([FIVE] + opening_cards(1, 2) + [FIVE], n_players=3)
-        p1 = engine.players[0]
+        p2 = engine.players[1]
 
         events = drive_round(engine, hit_responses=[True, False, False])
         bust_events = [e for e in events if isinstance(e, PlayerBustedEvent)]
         assert len(bust_events) == 1
-        assert bust_events[0].player is p1
+        assert bust_events[0].player is p2
 
     def test_bust_preserves_cumulative_score(self):
         engine = make_engine([FIVE] + opening_cards(1, 2) + [FIVE], n_players=3)
-        p1 = engine.players[0]
-        p1.score = 50
+        p2 = engine.players[1]
+        p2.score = 50
 
         drive_round(engine, hit_responses=[True, False, False])
-        assert p1.score == 50
+        assert p2.score == 50
 
     def test_non_bustable_card_no_bust(self):
         engine = make_engine([PLUS_FOUR] + opening_cards(1, 2) + [PLUS_FOUR], n_players=3)
@@ -240,21 +251,21 @@ class TestSecondChanceAbsorption:
 
     def test_second_chance_absorbs_duplicate(self):
         engine = make_engine(opening_cards(0, 1, 2) + [FIVE], n_players=3)
-        p1 = engine.players[0]
-        p1.hand = [FIVE, SECOND_CHANCE]
+        p2 = engine.players[1]
+        p2.hand = [FIVE, SECOND_CHANCE]
 
         events = drive_round(engine, hit_responses=[True, False, False, False])
 
-        assert p1.score == 5
-        assert not p1.has_card(SECOND_CHANCE)
+        assert p2.score == 5
+        assert not p2.has_card(SECOND_CHANCE)
         assert not any(
-            isinstance(e, PlayerBustedEvent) and e.player is p1 for e in events
+            isinstance(e, PlayerBustedEvent) and e.player is p2 for e in events
         )
 
     def test_second_chance_discards_both_cards(self):
         engine = make_engine(opening_cards(0, 1, 2) + [FIVE], n_players=3)
-        p1 = engine.players[0]
-        p1.hand = [FIVE, SECOND_CHANCE]
+        p2 = engine.players[1]
+        p2.hand = [FIVE, SECOND_CHANCE]
 
         drive_round(engine, hit_responses=[True, False, False, False])
 
@@ -267,9 +278,9 @@ class TestEndOfRoundScoring:
     def test_scores_accumulate(self):
         engine = make_engine(opening_cards(0, 1, 2) + [FIVE, THREE, SEVEN], n_players=3)
         drive_round(engine, hit_responses=[True, True, True, False, False, False])
-        assert engine.players[0].score == 5
-        assert engine.players[1].score == 3
-        assert engine.players[2].score == 7
+        assert engine.players[0].score == 7
+        assert engine.players[1].score == 5
+        assert engine.players[2].score == 3
 
     def test_hands_cleared_after_round(self):
         engine = make_engine(opening_cards(0, 1, 2) + [FIVE, THREE, SEVEN], n_players=3)
@@ -288,6 +299,14 @@ class TestEndOfRoundScoring:
         drive_round(engine, hit_responses=[False, False, False])
         assert engine.round_number == 1
 
+    def test_dealer_rotates_after_round(self):
+        engine = make_engine(opening_cards(0, 1, 2), n_players=3)
+
+        drive_round(engine, hit_responses=[False, False, False])
+
+        assert engine.dealer_index == 1
+        assert engine.dealer is engine.players[1]
+
     def test_round_over_event_yielded(self):
         engine = make_engine(opening_cards(0, 1, 2), n_players=3)
         events = drive_round(engine, hit_responses=[False, False, False])
@@ -300,12 +319,12 @@ class TestWinCondition:
 
     def test_game_over_when_player_reaches_200(self):
         engine = make_engine(opening_cards(0, 1, 2) + [TWELVE], n_players=3)
-        p1 = engine.players[0]
-        p1.score = 195
+        p2 = engine.players[1]
+        p2.score = 195
 
         drive_round(engine, hit_responses=[True, False, False, False])
         assert engine.game_over is True
-        assert engine.winner is p1
+        assert engine.winner is p2
 
     def test_no_game_over_below_200(self):
         engine = make_engine(opening_cards(0, 1, 2) + [FIVE], n_players=3)
@@ -321,7 +340,7 @@ class TestWinCondition:
 
         drive_round(engine, hit_responses=[True, True, False, False, False])
         assert engine.game_over is True
-        assert engine.winner is p1
+        assert engine.winner is p2
 
 
 class TestRoundExitCondition:
@@ -366,14 +385,14 @@ class TestRealMode:
         gen = engine.round()
         req = next(gen)
         assert isinstance(req, CardDrawRequest)
-        assert req.player is engine.players[0]
+        assert req.player is engine.players[1]
 
     def test_real_mode_yields_card_draw_request_for_opening_deal(self):
         engine = make_engine([], n_players=3, real_mode=True)
         gen = engine.round()
         req = next(gen)
         assert isinstance(req, CardDrawRequest)
-        assert req.player is engine.players[0]
+        assert req.player is engine.players[1]
 
     def test_real_mode_play_uses_card_provider(self):
         cards = iter([FIVE, THREE, SEVEN])
@@ -398,9 +417,9 @@ class TestRealMode:
 
         assert engine.game_over is True
         assert provided == [
-            (engine.players[0], FIVE),
-            (engine.players[1], THREE),
-            (engine.players[2], SEVEN),
+            (engine.players[1], FIVE),
+            (engine.players[2], THREE),
+            (engine.players[0], SEVEN),
         ]
 
 
@@ -443,7 +462,7 @@ class TestFlip7:
         events = drive_round(engine, hit_responses=hits)
         flip7_events = [e for e in events if isinstance(e, Flip7Event)]
         assert len(flip7_events) == 1
-        assert flip7_events[0].player is engine.players[0]
+        assert flip7_events[0].player is engine.players[1]
 
     def test_flip7_awards_15_bonus(self):
         cards = opening_cards(0, 1, 2) + [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX]
@@ -451,7 +470,7 @@ class TestFlip7:
         hits = [True, False, False] + [True] * 6
 
         drive_round(engine, hit_responses=hits)
-        assert engine.players[0].score == 36
+        assert engine.players[1].score == 36
 
     def test_flip7_ends_round_immediately(self):
         cards = opening_cards(0, 1, 2) + [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX]
@@ -470,8 +489,9 @@ class TestFlip7:
         hits = [True, True, False, True, False] + [True] * 5
 
         drive_round(engine, hit_responses=hits)
-        assert engine.players[1].score == 3
-        assert engine.players[2].score == 0
+        assert engine.players[1].score == 40
+        assert engine.players[2].score == 3
+        assert engine.players[0].score == 0
 
     def test_flip7_non_bustable_cards_dont_count(self):
         cards = opening_cards(0, 1, 2) + [ZERO, ONE, TWO, THREE, FOUR, FIVE, PLUS_FOUR]
@@ -490,7 +510,7 @@ class TestFlip7:
         events = drive_round(engine, hit_responses=hits)
         flip7_events = [e for e in events if isinstance(e, Flip7Event)]
         assert len(flip7_events) == 1
-        assert engine.players[0].score == 40
+        assert engine.players[1].score == 40
 
     def test_has_flip7_false_with_fewer_than_7(self):
         engine = make_engine([], n_players=3)

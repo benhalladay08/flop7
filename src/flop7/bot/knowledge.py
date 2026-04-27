@@ -57,6 +57,7 @@ class GameView:
     players: tuple[PlayerView, ...]
     active_player_indexes: tuple[int, ...]
     round_number: int
+    dealer_index: int
     real_mode: bool
     game_over: bool
     winner_index: int | None
@@ -74,6 +75,10 @@ class GameView:
         if self.winner_index is None:
             return None
         return self.players[self.winner_index]
+
+    @property
+    def dealer(self) -> PlayerView:
+        return self.players[self.dealer_index]
 
 
 def build_player_view(index: int, player: Player) -> PlayerView:
@@ -114,6 +119,7 @@ def build_game_view(game: GameEngine) -> GameView:
         players=players,
         active_player_indexes=active_player_indexes,
         round_number=game.round_number,
+        dealer_index=game.dealer_index,
         real_mode=game.real_mode,
         game_over=game.game_over,
         winner_index=winner_index,

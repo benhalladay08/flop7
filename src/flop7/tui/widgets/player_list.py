@@ -40,26 +40,34 @@ class PlayerListWidget(urwid.WidgetWrap):
         self,
         players: list[Player],
         focused_idx: int = 0,
+        dealer_idx: int | None = None,
         compact: bool = False,
     ) -> None:
         self._players = players
         self._focused_idx = focused_idx
+        self._dealer_idx = dealer_idx
         self._compact = compact
         super().__init__(self._build())
 
-    def update(self, players: list[Player], focused_idx: int = 0) -> None:
+    def update(
+        self,
+        players: list[Player],
+        focused_idx: int = 0,
+        dealer_idx: int | None = None,
+    ) -> None:
         self._players = players
         self._focused_idx = focused_idx
+        self._dealer_idx = dealer_idx
         self._w = self._build()
 
     def _build(self) -> urwid.Widget:
         rows: list[urwid.Widget] = []
 
         if self._compact:
-            header_text = "  Player      Score  St"
+            header_text = "  D   Player      Score  St"
         else:
             header_text = (
-                "  Player       Cards"
+                "  D   Player       Cards"
                 + " " * 28
                 + "Score  Status"
             )
@@ -69,12 +77,13 @@ class PlayerListWidget(urwid.WidgetWrap):
 
         for idx, player in enumerate(self._players):
             is_focused = idx == self._focused_idx
+            is_dealer = idx == self._dealer_idx
             status = player_status(player)
 
             if self._compact:
-                text = self._compact_row(player, is_focused, status)
+                text = self._compact_row(player, is_focused, status, is_dealer)
             else:
-                text = self._full_row(player, is_focused, status)
+                text = self._full_row(player, is_focused, status, is_dealer)
 
             if status == "Busted":
                 attr = "busted"
@@ -90,16 +99,30 @@ class PlayerListWidget(urwid.WidgetWrap):
         pile = urwid.Pile(rows)
         return urwid.Filler(pile, valign="top")
 
-    def _full_row(self, player: Player, focused: bool, status: str) -> str:
+    def _full_row(
+        self,
+        player: Player,
+        focused: bool,
+        status: str,
+        is_dealer: bool,
+    ) -> str:
         arrow = "▸ " if focused else "  "
+        dealer = "[D] " if is_dealer else "    "
         cards = " ".join(_card_tag(c) for c in player.hand)
         if status == "Busted":
             cards += " ← BUST"
         score = str(player.active_score)
-        return f"{arrow}{player.name:<12} {cards:<40} {score:>5}  {status}"
+        return f"{arrow}{dealer}{player.name:<12} {cards:<40} {score:>5}  {status}"
 
-    def _compact_row(self, player: Player, focused: bool, status: str) -> str:
+    def _compact_row(
+        self,
+        player: Player,
+        focused: bool,
+        status: str,
+        is_dealer: bool,
+    ) -> str:
         arrow = "▸ " if focused else "  "
+        dealer = "[D] " if is_dealer else "    "
         short = {"Active": "Act", "Stayed": "Stay", "Busted": "Bust"}[status]
         score = str(player.active_score)
-        return f"{arrow}{player.name:<10} {score:>4}  {short}"
+        return f"{arrow}{dealer}{player.name:<10} {score:>4}  {short}"
