@@ -12,7 +12,7 @@ class Node(ABC):
     validated user input.
 
     Dispatcher nodes (``is_dispatcher = True``) have no prompt of their
-    own; the orchestrator calls ``dispatch()`` to resolve them to a real
+    own; the orchestrator calls ``dispatch(context)`` to resolve them to a real
     child node before showing a prompt.
     """
 

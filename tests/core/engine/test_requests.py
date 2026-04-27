@@ -5,8 +5,8 @@ from flop7.core.classes.cards import FIVE
 from flop7.core.classes.player import Player
 from flop7.core.enum.decisions import TargetEvent
 from flop7.core.engine.requests import (
+    CardDrawRequest,
     CardDrawnEvent,
-    CardInputRequest,
     Flip7Event,
     FlipThreeResolvedEvent,
     FlipThreeStartEvent,
@@ -30,8 +30,8 @@ class TestRequestDataclasses:
         r = HitStayRequest(player=player)
         assert r.player is player
 
-    def test_card_input_request(self, player):
-        r = CardInputRequest(player=player)
+    def test_card_draw_request(self, player):
+        r = CardDrawRequest(player=player)
         assert r.player is player
 
     def test_target_request(self, player):

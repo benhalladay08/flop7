@@ -5,22 +5,21 @@ from flop7.core.classes.deck import Deck
 from flop7.core.classes.player import Player
 from flop7.core.engine.actions import get_action
 from flop7.core.engine.requests import (
+    CardDrawRequest,
     CardDrawnEvent,
-    CardInputRequest,
     Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
     RoundOverEvent,
     TargetRequest,
 )
-from flop7.core.protocols.decisions import HitStay, TargetSelector
+from flop7.core.protocols.decisions import CardProvider, HitStay, TargetSelector
 
 
 class GameEngine:
     """
     Base game engine. Owns the player list, handles scoring, round lifecycle,
-    dealer rotation, and win-condition checking. Subclasses provide the card
-    source (virtual deck vs. external input).
+    dealer rotation, win-condition checking, and auto-play request providers.
     """
 
     WIN_SCORE = 200
@@ -31,6 +30,7 @@ class GameEngine:
         self,
         deck: Deck,
         players: list[Player],
+        card_provider: CardProvider,
         hit_stay_decider: HitStay,
         target_selector: TargetSelector,
         real_mode: bool = False,
@@ -40,6 +40,7 @@ class GameEngine:
 
         self.deck = deck
         self.players = players
+        self.card_provider = card_provider
         self.hit_stay_decider = hit_stay_decider
         self.target_selector = target_selector
         self.real_mode = real_mode
@@ -57,7 +58,10 @@ class GameEngine:
         """Players still in the current round (haven't stayed or frozen)."""
         return [p for p in self.players if p.is_active]
     
-    def play(self, listeners: list[Callable] | None = None) -> None:
+    def play(
+        self,
+        listeners: list[Callable] | None = None,
+    ) -> None:
         """Main game loop. Auto-drives the round generator using the
         engine's callables. Continues until a player reaches WIN_SCORE.
 
@@ -80,8 +84,8 @@ class GameEngine:
                                 self, req.event, req.source, req.eligible,
                             )
                         )
-                    elif isinstance(req, CardInputRequest):
-                        req = gen.send(self.deck.deal())
+                    elif isinstance(req, CardDrawRequest):
+                        req = gen.send(self.card_provider(self, req.player))
                     else:
                         req = gen.send(None)
                 except StopIteration:
@@ -98,7 +102,7 @@ class GameEngine:
         whether to hit or stay; players with an empty hand are forced to draw
         instead of receiving a hit/stay choice.
 
-        Yields decision requests (``HitStayRequest``, ``CardInputRequest``,
+        Yields decision requests (``HitStayRequest``, ``CardDrawRequest``,
         ``TargetRequest``) and notification events (``CardDrawnEvent``,
         ``PlayerBustedEvent``, ``RoundOverEvent``).
 
@@ -162,11 +166,8 @@ class GameEngine:
     # --- round generator helpers --------------------------------------
 
     def _draw(self, player: Player):
-        """Yield a draw request (real) or auto-deal and notify (virtual)."""
-        if self.real_mode:
-            card = yield CardInputRequest(player=player)
-        else:
-            card = self.deck.deal()
+        """Yield a draw request and notify once the driver provides a card."""
+        card = yield CardDrawRequest(player=player)
         yield CardDrawnEvent(player=player, card=card)
         return card
 

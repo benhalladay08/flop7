@@ -16,8 +16,8 @@ class HitStayRequest:
 
 
 @dataclass
-class CardInputRequest:
-    """Yield to ask what card was drawn (real mode)."""
+class CardDrawRequest:
+    """Yield to ask the driver to provide the next drawn card."""
     player: Player
 
 

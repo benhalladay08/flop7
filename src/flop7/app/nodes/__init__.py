@@ -9,7 +9,6 @@ from flop7.app.nodes.setup import (
     SetupCompleteNode,
 )
 from flop7.app.nodes.game import (
-    BotCardInputNode,
     BotDecisionNode,
     BustNode,
     CardDrawnNode,
@@ -45,7 +44,6 @@ __all__ = [
     "HitStayNode",
     "BotDecisionNode",
     "DrawCardNode",
-    "BotCardInputNode",
     "CardDrawnNode",
     "TargetSelectNode",
     "BustNode",

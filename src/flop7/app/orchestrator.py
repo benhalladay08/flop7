@@ -37,6 +37,6 @@ class App:
         if next_node is not None:
             # Resolve dispatcher nodes immediately to a real prompt-bearing node.
             while next_node.is_dispatcher:
-                next_node = next_node.dispatch()
+                next_node = next_node.dispatch(self.context)
             self._current_node = next_node
             self.tui.set_prompt(self._current_node.prompt)

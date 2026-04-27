@@ -1,6 +1,7 @@
 """Shared fixtures and helpers for core module tests."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -10,8 +11,8 @@ from flop7.core.classes.deck import Deck
 from flop7.core.classes.player import Player
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
+    CardDrawRequest,
     CardDrawnEvent,
-    CardInputRequest,
     Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
@@ -55,6 +56,7 @@ def make_engine(
     n_players: int = 3,
     hit_responses: list[bool] | None = None,
     target_responses: list[Player] | None = None,
+    card_provider: Callable[[GameEngine, Player], Card] | None = None,
     real_mode: bool = False,
 ) -> GameEngine:
     """Build a GameEngine with deterministic deck and stub callables."""
@@ -75,9 +77,13 @@ def make_engine(
     ) -> Player:
         return next(target_iter)
 
+    def default_card_provider(game: GameEngine, player: Player) -> Card:
+        return game.deck.deal()
+
     engine = GameEngine(
         deck=deck,
         players=players,
+        card_provider=card_provider or default_card_provider,
         hit_stay_decider=hit_stay,
         target_selector=target_selector,
         real_mode=real_mode,
@@ -100,9 +106,11 @@ def drive_round(
     Sends the appropriate response for each yielded request:
     - ``HitStayRequest`` → next from *hit_responses*
     - ``TargetRequest``  → next from *target_responses*
-    - ``CardInputRequest`` → next from *card_inputs*
+    - ``CardDrawRequest`` → next from *card_inputs* in real mode,
+      or ``engine.deck.deal()`` in virtual mode
     - Everything else (events) → ``None``
     """
+    auto_deal = card_inputs is None and not engine.real_mode
     hit_iter = iter(hit_responses or [])
     target_iter = iter(target_responses or [])
     card_iter = iter(card_inputs or [])
@@ -128,8 +136,11 @@ def drive_round(
                 req = gen.send(next_response(hit_iter, "hit/stay"))
             elif isinstance(req, TargetRequest):
                 req = gen.send(next_response(target_iter, "target"))
-            elif isinstance(req, CardInputRequest):
-                req = gen.send(next_response(card_iter, "card input"))
+            elif isinstance(req, CardDrawRequest):
+                card = engine.deck.deal() if auto_deal else next_response(
+                    card_iter, "card draw",
+                )
+                req = gen.send(card)
             else:
                 req = gen.send(None)
         except StopIteration:

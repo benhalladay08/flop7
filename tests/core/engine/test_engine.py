@@ -25,8 +25,8 @@ from flop7.core.classes.cards import (
 )
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
+    CardDrawRequest,
     CardDrawnEvent,
-    CardInputRequest,
     Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
@@ -41,16 +41,34 @@ class TestConstructor:
     def test_fewer_than_3_players_raises(self):
         deck = make_deck([])
         with pytest.raises(ValueError, match="at least 3"):
-            GameEngine(deck, make_players(2), lambda g, p: True, lambda g, e, s, el: s)
+            GameEngine(
+                deck,
+                make_players(2),
+                lambda g, p: g.deck.deal(),
+                lambda g, p: True,
+                lambda g, e, s, el: s,
+            )
 
     def test_exactly_3_players_ok(self):
         deck = make_deck([FIVE])
-        engine = GameEngine(deck, make_players(3), lambda g, p: True, lambda g, e, s, el: s)
+        engine = GameEngine(
+            deck,
+            make_players(3),
+            lambda g, p: g.deck.deal(),
+            lambda g, p: True,
+            lambda g, e, s, el: s,
+        )
         assert len(engine.players) == 3
 
     def test_initial_state(self):
         deck = make_deck([])
-        engine = GameEngine(deck, make_players(3), lambda g, p: True, lambda g, e, s, el: s)
+        engine = GameEngine(
+            deck,
+            make_players(3),
+            lambda g, p: g.deck.deal(),
+            lambda g, p: True,
+            lambda g, e, s, el: s,
+        )
         assert engine.round_number == 0
         assert engine.game_over is False
         assert engine.winner is None
@@ -71,20 +89,32 @@ class TestActivePlayers:
 
 class TestRoundBasicFlow:
 
-    def test_round_starts_with_opening_deal(self):
-        """Each player is dealt an opening card before the first decision."""
+    def test_round_starts_with_opening_draw_requests(self):
+        """Each opening card is requested before being processed."""
         engine = make_engine(opening_cards(0, 1, 2), n_players=3)
         gen = engine.round()
 
         req = next(gen)
+        assert isinstance(req, CardDrawRequest)
+        assert req.player is engine.players[0]
+
+        req = gen.send(engine.deck.deal())
         assert isinstance(req, CardDrawnEvent)
         assert req.player is engine.players[0]
 
         req = gen.send(None)
+        assert isinstance(req, CardDrawRequest)
+        assert req.player is engine.players[1]
+
+        req = gen.send(engine.deck.deal())
         assert isinstance(req, CardDrawnEvent)
         assert req.player is engine.players[1]
 
         req = gen.send(None)
+        assert isinstance(req, CardDrawRequest)
+        assert req.player is engine.players[2]
+
+        req = gen.send(engine.deck.deal())
         assert isinstance(req, CardDrawnEvent)
         assert req.player is engine.players[2]
 
@@ -318,6 +348,7 @@ class TestPlay:
         engine = GameEngine(
             deck=deck,
             players=players,
+            card_provider=lambda game, player: game.deck.deal(),
             hit_stay_decider=hit_stay,
             target_selector=target_selector,
         )
@@ -330,12 +361,47 @@ class TestPlay:
 
 class TestRealMode:
 
-    def test_real_mode_yields_card_input_request_for_opening_deal(self):
+    def test_virtual_mode_yields_card_draw_request_for_opening_deal(self):
+        engine = make_engine(opening_cards(0, 1, 2), n_players=3)
+        gen = engine.round()
+        req = next(gen)
+        assert isinstance(req, CardDrawRequest)
+        assert req.player is engine.players[0]
+
+    def test_real_mode_yields_card_draw_request_for_opening_deal(self):
         engine = make_engine([], n_players=3, real_mode=True)
         gen = engine.round()
         req = next(gen)
-        assert isinstance(req, CardInputRequest)
+        assert isinstance(req, CardDrawRequest)
         assert req.player is engine.players[0]
+
+    def test_real_mode_play_uses_card_provider(self):
+        cards = iter([FIVE, THREE, SEVEN])
+        provided = []
+
+        def provider(game, player):
+            card = next(cards)
+            provided.append((player, card))
+            return card
+
+        engine = make_engine(
+            [],
+            n_players=3,
+            hit_responses=[False, False, False],
+            card_provider=provider,
+            real_mode=True,
+        )
+        for player in engine.players:
+            player.score = 199
+
+        engine.play()
+
+        assert engine.game_over is True
+        assert provided == [
+            (engine.players[0], FIVE),
+            (engine.players[1], THREE),
+            (engine.players[2], SEVEN),
+        ]
 
 
 class TestReshuffle:
@@ -448,6 +514,7 @@ class TestPlayListeners:
         players = make_players(3)
         return GameEngine(
             Deck(), players,
+            card_provider=lambda game, player: game.deck.deal(),
             hit_stay_decider=lambda game, player: False,
             target_selector=lambda game, event, player, eligible: eligible[0],
         )
@@ -457,6 +524,7 @@ class TestPlayListeners:
         log = []
         engine.play(listeners=[log.append])
         assert len(log) > 0
+        assert any(isinstance(e, CardDrawRequest) for e in log)
         assert any(isinstance(e, CardDrawnEvent) for e in log)
         assert any(isinstance(e, RoundOverEvent) for e in log)
 
@@ -465,8 +533,9 @@ class TestPlayListeners:
         engine = self._always_stay_engine()
         order = []
         engine.play(listeners=[lambda e: order.append(type(e).__name__)])
-        # First events should be CardDrawnEvent from opening deal
-        assert order[0] == "CardDrawnEvent"
+        # The draw request is observed before the virtual driver provides a card.
+        assert order[0] == "CardDrawRequest"
+        assert order[1] == "CardDrawnEvent"
 
     def test_multiple_listeners_all_called(self):
         engine = self._always_stay_engine()

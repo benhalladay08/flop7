@@ -150,6 +150,7 @@ def run_game(
     engine = GameEngine(
         deck=deck,
         players=players,
+        card_provider=lambda game, _player: game.deck.deal(),
         hit_stay_decider=controller.hit_stay,
         target_selector=controller.target_selector,
     )

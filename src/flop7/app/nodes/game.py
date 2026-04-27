@@ -17,8 +17,8 @@ from flop7.app.prompt import Prompt
 from flop7.bot.controller import BotController
 from flop7.core.classes.cards import ALL_CARDS, FLIP_THREE, FREEZE, SECOND_CHANCE, TIMES_TWO
 from flop7.core.engine.requests import (
+    CardDrawRequest,
     CardDrawnEvent,
-    CardInputRequest,
     Flip7Event,
     FlipThreeResolvedEvent,
     FlipThreeStartEvent,
@@ -75,9 +75,15 @@ def _build_engine(context: dict):
     context["_bot_controller"] = bot_controller
     deck = Deck()
 
+    def card_provider(game, player):
+        if game.real_mode:
+            raise ValueError("Real-mode card draws must be provided by the UI.")
+        return game.deck.deal()
+
     return GameEngine(
         deck=deck,
         players=players,
+        card_provider=card_provider,
         hit_stay_decider=bot_controller.hit_stay,
         target_selector=bot_controller.target_selector,
         real_mode=real_mode,
@@ -144,8 +150,10 @@ class GameRoundNode(Node):
 
     # --- public API ---------------------------------------------------
 
-    def dispatch(self) -> Node:
+    def dispatch(self, context: dict | None = None) -> Node:
         """Return the child node that should handle the current event."""
+        if context is None:
+            context = {}
         event = self._current_event
         engine = self._engine
         bots = self._bots
@@ -155,9 +163,7 @@ class GameRoundNode(Node):
                 return HitStayNode(self, p)
             case HitStayRequest(player=p):
                 return BotDecisionNode(self, p)
-            case CardInputRequest(player=p) if bots.has_bot(engine, p):
-                return BotCardInputNode(self, p)
-            case CardInputRequest(player=p):
+            case CardDrawRequest(player=p):
                 return DrawCardNode(self, p)
             case CardDrawnEvent(player=p, card=c):
                 return CardDrawnNode(self, p, c)
@@ -199,10 +205,10 @@ class GameRoundNode(Node):
             self._current_event = next(self._gen)
 
         self._sync_focus(context)
-        next_node = self.dispatch()
+        next_node = self.dispatch(context)
         # Resolve nested dispatchers (defensive — currently only this one).
         while next_node.is_dispatcher:
-            next_node = next_node.dispatch()
+            next_node = next_node.dispatch(context)
         return next_node
 
     # --- helpers ------------------------------------------------------
@@ -324,14 +330,17 @@ class HitStayNode(Node):
 
 
 class DrawCardNode(Node):
-    """Prompt a human player for the card they just drew (real mode)."""
+    """Resolve a card draw request for real or virtual play."""
 
     def __init__(self, round_node: GameRoundNode, player) -> None:
         self._round = round_node
         self._player = player
+        self.is_dispatcher = not round_node.engine.real_mode
 
     @property
     def prompt(self) -> Prompt:
+        if not self._round.engine.real_mode:
+            raise RuntimeError("Virtual draw nodes are resolved by dispatch().")
         return Prompt(
             instruction=(
                 f"What card did {self._player.name} draw?\n"
@@ -344,30 +353,10 @@ class DrawCardNode(Node):
         card = _CARD_LOOKUP[value.lower()]
         return self._round.advance(card, context)
 
-
-class BotCardInputNode(Node):
-    """Prompt the user for the card a bot just drew (real mode only).
-
-    The engine doesn't distinguish bot vs. human here — both yield
-    ``CardInputRequest`` — but the prompt wording does.
-    """
-
-    def __init__(self, round_node: GameRoundNode, player) -> None:
-        self._round = round_node
-        self._player = player
-
-    @property
-    def prompt(self) -> Prompt:
-        return Prompt(
-            instruction=(
-                f"{self._player.name} hits — what card was drawn?\n"
-                f"Valid: {_VALID_CARD_DISPLAY}"
-            ),
-            validator=_card_input_validator,
-        )
-
-    def on_input(self, value: str, context: dict) -> Node | None:
-        card = _CARD_LOOKUP[value.lower()]
+    def dispatch(self, context: dict | None = None) -> Node:
+        if context is None:
+            context = {}
+        card = self._round.engine.card_provider(self._round.engine, self._player)
         return self._round.advance(card, context)
 
 

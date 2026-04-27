@@ -14,6 +14,7 @@ from flop7.core.classes.cards import (
 from flop7.core.engine.actions import get_action, flip_three, freeze, second_chance
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
+    CardDrawRequest,
     CardDrawnEvent,
     FlipThreeResolvedEvent,
     FlipThreeStartEvent,
@@ -46,7 +47,10 @@ def _engine(cards, n_players=3):
     def target(g, e, s, eligible):
         raise RuntimeError("target should not be called; use drive_round")
 
-    return GameEngine(deck, players, hit_stay, target)
+    def card_provider(game, player):
+        return game.deck.deal()
+
+    return GameEngine(deck, players, card_provider, hit_stay, target)
 
 
 def _advance_to_target_request(engine):
@@ -54,7 +58,12 @@ def _advance_to_target_request(engine):
     gen = engine.round()
     req = next(gen)
     while not isinstance(req, TargetRequest):
-        req = gen.send(True if isinstance(req, HitStayRequest) else None)
+        if isinstance(req, CardDrawRequest):
+            req = gen.send(engine.deck.deal())
+        elif isinstance(req, HitStayRequest):
+            req = gen.send(True)
+        else:
+            req = gen.send(None)
     return gen, req
 
 
@@ -456,20 +465,7 @@ class TestSecondChance:
         p1, p2, _ = engine.players
         p1.hand = [SECOND_CHANCE]
 
-        gen = engine.round()
-        req = next(gen)
-        req = gen.send(None)
-        req = gen.send(None)
-        req = gen.send(None)
-        assert isinstance(req, HitStayRequest)
-        assert req.player is p1
-
-        req = gen.send(True)
-        assert isinstance(req, CardDrawnEvent)
-        assert req.card is SECOND_CHANCE
-
-        req = gen.send(None)
-        assert isinstance(req, TargetRequest)
+        gen, req = _advance_to_target_request(engine)
         assert p2 in req.eligible
 
         p2.hand.append(SECOND_CHANCE)
