@@ -197,9 +197,9 @@ class TestTargetSecondChance:
         result = _target(bot, game, TargetEvent.SECOND_CHANCE, 0, [2])
         assert result.index == 2
 
-    def test_fallback_to_self_when_no_eligible(self, bot, game):
-        result = _target(bot, game, TargetEvent.SECOND_CHANCE, 0, [])
-        assert result.index == 0
+    def test_raises_when_no_eligible(self, bot, game):
+        with pytest.raises(ValueError, match="eligible"):
+            _target(bot, game, TargetEvent.SECOND_CHANCE, 0, [])
 
     def test_random_tiebreak(self, bot, game):
         game.players[1].score = 10

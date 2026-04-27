@@ -114,7 +114,9 @@ class BasicBot(AbstractBot):
         eligible: tuple[PlayerView, ...],
     ) -> PlayerView:
         if not eligible:
-            return player
+            raise ValueError(
+                "Second Chance target selection requires at least one eligible player."
+            )
         lowest_score = min(overall_score(p) for p in eligible)
         bottom = [p for p in eligible if overall_score(p) == lowest_score]
         return random.choice(bottom)
