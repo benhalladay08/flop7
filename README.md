@@ -44,3 +44,7 @@ flop7
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+Created by Ben Halladay
