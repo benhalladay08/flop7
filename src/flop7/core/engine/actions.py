@@ -102,9 +102,9 @@ def second_chance(game: GameEngine, player: Player, card: Card):
     target = yield TargetRequest(
         event=TargetEvent.SECOND_CHANCE, source=player, eligible=eligible,
     )
-    if target not in eligible or not target.is_active or target.has_card(SECOND_CHANCE):
-        game.deck.discard([card])
-        return
+    _validate_target(TargetEvent.SECOND_CHANCE, target, eligible)
+    if target.has_card(SECOND_CHANCE):
+        raise ValueError("SECOND_CHANCE target already has Second Chance.")
 
     target.hand.append(card)
     yield SecondChanceEvent(source=player, target=target)

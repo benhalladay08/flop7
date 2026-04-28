@@ -448,24 +448,18 @@ class TestSecondChance:
         ]
         assert len(sc_targets) == 0
 
-    def test_second_chance_invalid_selected_target_discarded(self):
+    def test_second_chance_invalid_selected_target_raises_without_discarding(self):
         engine = _engine(opening_cards(0, 1, 2) + [SECOND_CHANCE])
-        p1, p2, _ = engine.players
+        p1, _, _ = engine.players
         p1.hand = [SECOND_CHANCE]
 
-        events = drive_round(
-            engine,
-            hit_responses=[True, False, False, False],
-            target_responses=[p1],
-        )
+        gen, req = _advance_to_target_request(engine)
 
-        sc_targets = [
-            event for event in events
-            if isinstance(event, TargetRequest) and event.event.name == "SECOND_CHANCE"
-        ]
-        assert len(sc_targets) == 1
-        assert p2.score == 0
-        assert engine.deck.discard_pile.count(SECOND_CHANCE) >= 1
+        assert p1 not in req.eligible
+        with pytest.raises(ValueError, match="SECOND_CHANCE target"):
+            gen.send(p1)
+
+        assert engine.deck.discard_pile.count(SECOND_CHANCE) == 0
 
     def test_second_chance_target_revalidated_after_request(self):
         engine = _engine(opening_cards(0, 1, 2) + [SECOND_CHANCE])
@@ -476,9 +470,10 @@ class TestSecondChance:
         assert p2 in req.eligible
 
         p2.hand.append(SECOND_CHANCE)
-        gen.send(p2)
+        with pytest.raises(ValueError, match="already has Second Chance"):
+            gen.send(p2)
 
-        assert engine.deck.discard_pile.count(SECOND_CHANCE) == 1
+        assert engine.deck.discard_pile.count(SECOND_CHANCE) == 0
 
     def test_second_chance_protects_then_consumed(self):
         engine = _engine([FIVE] + opening_cards(1, 2) + [SECOND_CHANCE, FIVE])
