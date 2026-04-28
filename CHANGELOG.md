@@ -7,3 +7,7 @@
 ## 1.0.1
 
 - Fix issue with lazy imports in urwid packaging during binary construction.
+
+## 1.0.2
+
+- Fix issue with whitespace padding around the title in the home page
