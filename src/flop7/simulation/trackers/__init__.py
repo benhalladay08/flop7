@@ -16,4 +16,4 @@ __all__ = [
 
 def default_trackers() -> list[SimTracker]:
     """Create a fresh set of default trackers for a simulation run."""
-    return [Flip7Tracker(), OpeningFreezeTracker(), BustTracker()]
+    return [Flip7Tracker(), BustTracker()]
