@@ -3,6 +3,15 @@ name: Build & Distribute
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build and distribute, e.g. v1.0.0
+        required: true
+        type: string
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 jobs:
   publish-pypi:
@@ -70,6 +79,7 @@ jobs:
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: ${{ matrix.asset }}
 
   update-brew:
@@ -80,7 +90,7 @@ jobs:
       - name: Download release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ env.RELEASE_TAG }}
         run: |
           gh release download "$TAG" \
             --repo benhalladay08/flop7 \
@@ -104,7 +114,7 @@ jobs:
 
       - name: Generate formula
         env:
-          VERSION: ${{ github.event.release.tag_name }}
+          VERSION: ${{ env.RELEASE_TAG }}
           SHA_MACOS_ARM64: ${{ steps.shas.outputs.macos_arm64 }}
           SHA_MACOS_X86_64: ${{ steps.shas.outputs.macos_x86_64 }}
           SHA_LINUX_X86_64: ${{ steps.shas.outputs.linux_x86_64 }}
@@ -147,9 +157,11 @@ jobs:
 
       - name: Commit and push formula
         working-directory: tap
+        env:
+          VERSION: ${{ env.RELEASE_TAG }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/flop7.rb
-          git commit -m "flop7 ${GITHUB_REF_NAME#v}"
+          git commit -m "flop7 ${VERSION#v}"
           git push
