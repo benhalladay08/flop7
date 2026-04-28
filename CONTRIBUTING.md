@@ -69,7 +69,7 @@ Open a GitHub issue with:
 - What actually happened
 - A minimal reproduction (a bot config, a simulation seed, or a card sequence)
 
-For larger features, sketch the idea on the [roadmap](docs/roadmap.md) discussion or open an issue first — it saves rework.
+For larger features, sketch the idea on the [ideas board discussion](https://github.com/benhalladay08/flop7/discussions/1) or open an issue first — it saves rework.
 
 ## Project rule: extend, don't reimplement
 
