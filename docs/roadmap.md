@@ -2,7 +2,7 @@
 
 ## In progress
 
-_Nothing tracked yet._
+- **New version available:** Show in the TUI when a new version of flop7 is available.
 
 ## Planned
 
