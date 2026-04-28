@@ -219,7 +219,7 @@ x2 modifier:   28 × 2       = 56
 
 ## Player Decision Flow
 
-The diagram below covers every branch a player (or AI agent) must handle on their turn.
+The diagram below covers every branch a player must handle on their turn.
 
 ```plantuml
 @startuml
@@ -237,99 +237,84 @@ skinparam activity {
 
 start
 
-if (Player is active?) then (no)
-  :Skip turn;
+if (Player is still in the round?) then (no)
+  :Skip — they have already stayed,\nbusted, or been frozen;
   stop
 endif
 
-if (flip_three_remaining > 0?) then (yes)
-  :Forced draw\n(no hit/stay choice);
-  :flip_three_remaining -= 1;
+if (Owed a forced draw\nfrom a Flip Three?) then (yes)
+  :Take the next card\n(no hit/stay choice);
 else (no)
-  if (Holds at least 1 card?) then (yes)
-    :Offer Hit or Stay;
+  if (Player has at least 1 card?) then (yes)
+    :Choose Hit or Stay;
     if (Player chooses Stay?) then (yes)
-      :stay()\nis_active = False;
-      :Bank round score;
+      :Bank round score and exit the round;
       stop
     endif
   else (no)
-    note right: Must draw at least one card
+    note right: A player with no cards\nmust draw — they cannot stay
   endif
-  :Hit — deal one card;
+  :Hit — take the next card;
 endif
 
 :Receive card;
 
 switch (Card type?)
 
-case (Number card\n[bustable])
-  if (Value already in number_cards?) then (yes)
-    if (Holds Second Chance?) then (yes)
-      :Discard Second Chance\nand duplicate;
-      :Return SECOND_CHANCE_USED;
+case (Number card)
+  if (Same value already in front of player?) then (yes)
+    if (Player holds a Second Chance?) then (yes)
+      :Discard the Second Chance\nand the duplicate;
     else (no)
-      :BUST — score 0 this round;
-      :has_busted = True\nis_active = False;
-      :Return BUSTED;
+      :BUST — player scores 0 this round\nand exits the round;
       stop
     endif
   else (no)
-    :Add to number_cards;
-    if (len(number_cards) == 7?) then (yes)
+    :Place the card in the\nnumber-card row;
+    if (Player now has 7 unique number cards?) then (yes)
       :FLIP 7!;
-      :has_flip_7 = True\nis_active = False;
-      :Round ends for all players\n+15 bonus applied at scoring;
+      :Round ends immediately for everyone\n(+15 bonus at scoring);
       stop
-    else (no)
-      :Return OK;
     endif
   endif
 
 case (Second Chance)
-  if (Already holds a Second Chance?) then (yes)
+  if (Player already holds a Second Chance?) then (yes)
     if (Another active player exists?) then (yes)
-      :Re-gift to that player;
+      :Pass it to another active player;
     else (no)
-      :Discard;
+      :Discard it;
     endif
   else (no)
-    :Hold Second Chance;
+    :Hold the Second Chance;
   endif
-  :Return OK;
 
 case (Flip Three)
-  :Target any active player
-(including self);
-  :target.flip_three_remaining += 3;
+  :Choose any active player\n(including yourself);
+  :Target must accept\nthe next 3 cards;
   note right
-    Engine handles the 3-card
-    draw loop on target's turns.
-    Nested Flip Three / Freeze
-    resolved after all 3 drawn.
+    Stop early if the target busts
+    or hits Flip 7. Nested Flip Three
+    or Freeze cards from those 3 are
+    resolved after all 3 are drawn
+    (and only if the target is still in).
   end note
-  :Return OK;
 
 case (Freeze)
-  :Target any active player\n(including self);
-  :target.freeze()\ntarget.is_active = False;
-  :Target banks current score;
-  :Return OK;
+  :Choose any active player\n(including yourself);
+  :Target banks their current score\nand exits the round;
 
-case (Modifier card\n+2 / +4 / +6\n+8 / +10 / x2)
-  :Add to modifier_cards;
-  :Return OK;
+case (Modifier card\n+2 / +4 / +6\n+8 / +10 / ×2)
+  :Place above the number-card row;
 
 endswitch
 
-:Check round-end conditions;
-
-if (All players inactive?) then (yes)
-  :End round — score all players;
+if (No active players remain?) then (yes)
+  :End of round;
   stop
 endif
 
-:Continue to next active player's turn;
+:Continue to the next active player's turn;
 
 stop
 @enduml
@@ -345,34 +330,33 @@ title Round End — Scoring Sequence
 
 start
 
-:Round ends\n(all inactive OR Flip 7 triggered);
+:Round ends — either every player has\nstayed/busted/been frozen, or\nsomeone hit Flip 7;
 
 partition "For each player" {
-  if (has_busted?) then (yes)
-    :round_score = 0;
+  if (Player busted this round?) then (yes)
+    :Round score = 0;
   else (no)
-    :total = sum(number_cards);
-    if (x2 in modifier_cards?) then (yes)
-      :total = total × 2;
+    :Sum the values of all number cards;
+    if (Player holds a ×2 modifier?) then (yes)
+      :Double the sum;
     endif
-    :total += sum(flat modifiers);
-    if (has_flip_7?) then (yes)
-      :total += 15;
+    :Add any flat modifiers (+2 / +4 / +6 / +8 / +10);
+    if (Player hit Flip 7?) then (yes)
+      :Add 15;
     endif
-    :round_score = total;
+    :Round score = result;
   endif
-  :player.total_score += round_score;
-  :player.reset_round();
+  :Add round score to the player's total;
 }
 
-:Collect all cards → deck.end_round(cards);
-:Pass deck left → new dealer;
+:Set used cards aside\n(do not return to the deck yet);
+:Pass the deck to the left —\nthat player is the new dealer;
 
-if (Any player total_score >= 200?) then (yes)
-  :Game over\nHighest score wins;
+if (At least one player has 200+ points?) then (yes)
+  :Game over — player with the\nmost total points wins;
   stop
 else (no)
-  :Begin new round;
+  :Begin a new round;
 endif
 
 stop

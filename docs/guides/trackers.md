@@ -45,68 +45,70 @@ Use `isinstance(event, EventType)` inside `on_event` to filter. See the existing
 
 ## Walkthrough — building a new tracker
 
-We'll build `BiggestRoundTracker`: records the largest single-round score across all simulated games and which bot earned it.
+We'll build `HighScoreTracker`: records the highest final cumulative score earned by any winning bot across the simulation batch, and which bot type earned it.
+
+This uses `on_game_over` (called once per game with the finished engine) rather than `on_event` — it's the natural choice when the data you want is already on the engine at game-end. Trackers that need to observe in-game state (busts, freezes, draws) use `on_event` instead.
 
 ### 1. Create the tracker module
 
-Create `src/flop7/simulation/trackers/biggest_round.py`:
+Create `src/flop7/simulation/trackers/high_score.py`:
 
 ```python
-"""Tracker for the largest single-round score in a simulation batch."""
+"""Tracker for the highest winning score across a simulation batch."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flop7.core.engine.requests import RoundOverEvent
-
 if TYPE_CHECKING:
     from flop7.core.engine.engine import GameEngine
 
 
-class BiggestRoundTracker:
-    """Tracks the highest single-round score across all games."""
+class HighScoreTracker:
+    """Tracks the highest winning final score across all games."""
 
-    label = "Biggest Round"
+    label = "High Score"
 
     def __init__(self) -> None:
         self._best_score: int = 0
-        self._best_player: str = ""
+        self._best_winner: str = ""
         self._games: int = 0
 
     def on_event(self, event: object) -> None:
-        if not isinstance(event, RoundOverEvent):
-            return
-        for player in event.players:
-            if player.active_score > self._best_score:
-                self._best_score = player.active_score
-                self._best_player = player.name
+        # No per-event data needed — see Flip7Tracker / BustTracker for that pattern.
+        pass
 
     def on_game_over(self, engine: GameEngine) -> None:
         self._games += 1
+        winner = engine.winner
+        if winner is not None and winner.score > self._best_score:
+            self._best_score = winner.score
+            self._best_winner = winner.name
 
     def format_results(self) -> list[str]:
-        if self._best_score == 0:
-            return ["No rounds recorded"]
+        if self._games == 0:
+            return ["No games recorded"]
         return [
             f"Score: {self._best_score}",
-            f"By: {self._best_player}",
+            f"By: {self._best_winner}",
         ]
 ```
 
-> Verify the exact field name on `RoundOverEvent` in `flop7/core/engine/requests.py` before relying on it — the example uses `event.players`, but match whatever the engine actually exposes.
+`engine.winner` is set when the engine flips `game_over = True` at the end of a winning round (see [`core/engine/engine.py`](../../src/flop7/core/engine/engine.py)). It's always populated by the time `on_game_over` fires, since `run_game` only returns after `engine.play()` finishes.
+
+> If you instead want a tracker that listens to the event stream — e.g. counting busts or freezes — `BustTracker` and `Flip7Tracker` are the canonical templates. Filter inside `on_event` with `isinstance(event, PlayerBustedEvent)` or whichever event type you care about.
 
 ### 2. (Optional) Add it to the default set
 
 If your tracker should run on every default simulation, add it to [`simulation/trackers/__init__.py`](../../src/flop7/simulation/trackers/__init__.py):
 
 ```python
-from flop7.simulation.trackers.biggest_round import BiggestRoundTracker
+from flop7.simulation.trackers.high_score import HighScoreTracker
 
 __all__ = [
-    "BiggestRoundTracker",
     "BustTracker",
     "Flip7Tracker",
+    "HighScoreTracker",
     "OpeningFreezeTracker",
     "SimTracker",
     "default_trackers",
@@ -114,7 +116,7 @@ __all__ = [
 
 
 def default_trackers() -> list[SimTracker]:
-    return [Flip7Tracker(), BustTracker(), BiggestRoundTracker()]
+    return [Flip7Tracker(), BustTracker(), HighScoreTracker()]
 ```
 
 If it's a one-off you'd rather opt into per simulation, skip this step and pass it explicitly to `run_game`.
@@ -123,9 +125,9 @@ If it's a one-off you'd rather opt into per simulation, skip this step and pass 
 
 ```python
 from flop7.simulation.runner import run_game
-from flop7.simulation.trackers.biggest_round import BiggestRoundTracker
+from flop7.simulation.trackers.high_score import HighScoreTracker
 
-tracker = BiggestRoundTracker()
+tracker = HighScoreTracker()
 for _ in range(500):
     run_game({"Basic": 3}, trackers=[tracker])
 
@@ -140,37 +142,48 @@ A tracker instance accumulates across every `run_game` call you pass it to — t
 
 Mirror [`tests/simulation/`](../../tests/simulation/). Two patterns work well:
 
-**Direct event injection** — fastest, no engine needed:
+**Direct invocation with a stub engine** — fastest, no full game needed. Build a minimal engine-shaped object and call the tracker hook directly:
 
 ```python
-from flop7.core.engine.requests import RoundOverEvent
-from flop7.simulation.trackers.biggest_round import BiggestRoundTracker
+from types import SimpleNamespace
+
+from flop7.simulation.trackers.high_score import HighScoreTracker
 
 
-def test_records_highest_score():
-    tracker = BiggestRoundTracker()
-    tracker.on_event(RoundOverEvent(players=[
-        FakePlayer(name="Basic 1", active_score=42),
-        FakePlayer(name="Basic 2", active_score=18),
-    ]))
-    assert tracker.format_results() == ["Score: 42", "By: Basic 1"]
+def test_records_highest_winning_score():
+    tracker = HighScoreTracker()
+
+    tracker.on_game_over(SimpleNamespace(
+        winner=SimpleNamespace(name="Basic 1", score=210),
+    ))
+    tracker.on_game_over(SimpleNamespace(
+        winner=SimpleNamespace(name="Basic 2", score=242),
+    ))
+    tracker.on_game_over(SimpleNamespace(
+        winner=SimpleNamespace(name="Basic 3", score=205),
+    ))
+
+    assert tracker.format_results() == ["Score: 242", "By: Basic 2"]
 ```
 
-**End-to-end through `run_game`** — verifies the tracker really receives the events the engine emits:
+For event-based trackers, build the relevant event with `Player` instances directly (see `tests/bot/models/test_basic.py` for the pattern).
+
+**End-to-end through `run_game`** — verifies the tracker really receives the engine output:
 
 ```python
 from flop7.simulation.runner import run_game
-from flop7.simulation.trackers.biggest_round import BiggestRoundTracker
+from flop7.simulation.trackers.high_score import HighScoreTracker
 
 
 def test_accumulates_across_games():
-    tracker = BiggestRoundTracker()
+    tracker = HighScoreTracker()
     for _ in range(5):
         run_game({"Basic": 3}, trackers=[tracker])
     assert tracker._games == 5
+    assert tracker._best_score >= 200
 ```
 
-Add at least one of each. The first nails the logic, the second catches contract drift if `RoundOverEvent`'s shape ever changes.
+Add at least one of each. The first nails the logic; the second catches contract drift if engine fields you depend on ever change.
 
 ## Project rule: don't recompute engine state
 
