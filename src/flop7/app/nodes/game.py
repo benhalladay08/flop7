@@ -15,7 +15,13 @@ from __future__ import annotations
 from flop7.app.nodes.base import Node
 from flop7.app.prompt import Prompt
 from flop7.bot.controller import BotController
-from flop7.core.classes.cards import ALL_CARDS, FLIP_THREE, FREEZE, SECOND_CHANCE, TIMES_TWO
+from flop7.core.classes.cards import (
+    ALL_CARDS,
+    FLIP_THREE,
+    FREEZE,
+    SECOND_CHANCE,
+    TIMES_TWO,
+)
 from flop7.core.engine.requests import (
     CardDrawRequest,
     CardDrawnEvent,
@@ -93,13 +99,13 @@ def _build_engine(context: dict):
 # ── Validators ───────────────────────────────────────────────────────
 
 def _hit_stay_validator(text: str) -> str | None:
-    if text.lower() in ("hit", "stay"):
+    if text.strip().lower() in ("hit", "stay"):
         return None
     return "Type 'hit' or 'stay'."
 
 
 def _card_input_validator(text: str) -> str | None:
-    if text.lower() in _CARD_LOOKUP:
+    if text.strip().lower() in _CARD_LOOKUP:
         return None
     return f"Unknown card. Valid: {_VALID_CARD_DISPLAY}"
 
@@ -108,7 +114,7 @@ def _make_target_validator(eligible_names: list[str]):
     lower_names = [n.lower() for n in eligible_names]
 
     def validator(text: str) -> str | None:
-        if text.lower() in lower_names:
+        if text.strip().lower() in lower_names:
             return None
         return f"Choose a player: {', '.join(eligible_names)}"
 
@@ -232,6 +238,12 @@ class GameRoundNode(Node):
             return
         event = self._current_event
         player = getattr(event, "player", None) or getattr(event, "source", None)
+        if isinstance(event, CardDrawnEvent):
+            screen.set_pending_draw(event.player, event.card)
+        elif isinstance(event, TargetRequest):
+            screen.clear_pending_draw_unless(event.source)
+        else:
+            screen.clear_pending_draw()
         if player and player in self._engine.players:
             screen.set_focused(self._engine.players.index(player))
         screen.refresh()
@@ -326,7 +338,7 @@ class HitStayNode(Node):
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        return self._round.advance(value.lower() == "hit", context)
+        return self._round.advance(value.strip().lower() == "hit", context)
 
 
 class DrawCardNode(Node):
@@ -350,7 +362,7 @@ class DrawCardNode(Node):
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        card = _CARD_LOOKUP[value.lower()]
+        card = _CARD_LOOKUP[value.strip().lower()]
         return self._round.advance(card, context)
 
     def dispatch(self, context: dict | None = None) -> Node:
@@ -407,7 +419,7 @@ class TargetSelectNode(Node):
     def on_input(self, value: str, context: dict) -> Node | None:
         if self._is_bot:
             return self._round.advance(self._bot_target, context)
-        lower = value.lower()
+        lower = value.strip().lower()
         target = next(p for p in self._request.eligible if p.name.lower() == lower)
         return self._round.advance(target, context)
 
@@ -454,7 +466,9 @@ class GameOverNode(Node):
                 f"Final scores:\n{scores}\n\n"
                 f"Type 'home' to return to the main menu."
             ),
-            validator=lambda t: None if t.lower() == "home" else "Type 'home'.",
+            validator=lambda t: (
+                None if t.strip().lower() == "home" else "Type 'home'."
+            ),
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:

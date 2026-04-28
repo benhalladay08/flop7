@@ -8,6 +8,8 @@ from flop7.tui.widgets.card_detail import CardDetailPane
 from flop7.tui.widgets.player_list import PlayerListWidget, player_status
 
 if TYPE_CHECKING:
+    from flop7.core.classes.cards import Card
+    from flop7.core.classes.player import Player
     from flop7.core.engine.engine import GameEngine
 
 WIDE_THRESHOLD = 120
@@ -30,6 +32,7 @@ class GameScreen(urwid.WidgetWrap):
     def __init__(self, engine: GameEngine, focused_idx: int = 0) -> None:
         self._engine = engine
         self._focused_idx = focused_idx
+        self._pending_draw: tuple[int, Card] | None = None
         self._last_mode: str | None = None
         super().__init__(urwid.SolidFill(" "))
 
@@ -44,6 +47,28 @@ class GameScreen(urwid.WidgetWrap):
         self._focused_idx = idx
         self._last_mode = None
         self._invalidate()
+
+    def set_pending_draw(self, player: Player, card: Card) -> None:
+        """Show a just-drawn card before the engine commits it to a hand."""
+        self._pending_draw = (self._engine.players.index(player), card)
+        self._last_mode = None
+        self._invalidate()
+
+    def clear_pending_draw(self) -> None:
+        """Clear any display-only card preview."""
+        if self._pending_draw is None:
+            return
+        self._pending_draw = None
+        self._last_mode = None
+        self._invalidate()
+
+    def clear_pending_draw_unless(self, player: Player) -> None:
+        """Keep a pending preview only if it belongs to the given player."""
+        if self._pending_draw is None:
+            return
+        if self._pending_draw[0] == self._engine.players.index(player):
+            return
+        self.clear_pending_draw()
 
     def refresh(self) -> None:
         """Force a layout rebuild on the next render pass."""
@@ -72,6 +97,7 @@ class GameScreen(urwid.WidgetWrap):
             self._players,
             focused_idx=self._focused_idx,
             dealer_idx=self._engine.dealer_index,
+            pending_draw=self._pending_draw,
             compact=False,
         )
 
@@ -84,6 +110,7 @@ class GameScreen(urwid.WidgetWrap):
             self._players,
             focused_idx=self._focused_idx,
             dealer_idx=self._engine.dealer_index,
+            pending_draw=self._pending_draw,
             compact=True,
         )
 
@@ -92,7 +119,7 @@ class GameScreen(urwid.WidgetWrap):
         if focused:
             status = player_status(focused)
             detail_title = f"{focused.name} ({status})"
-            detail_cards = focused.hand
+            detail_cards = self._cards_for_player(self._focused_idx, focused)
 
         card_detail = CardDetailPane(
             cards=detail_cards,
@@ -103,3 +130,9 @@ class GameScreen(urwid.WidgetWrap):
             ("weight", 1, player_list),
             ("weight", 3, card_detail),
         ])
+
+    def _cards_for_player(self, index: int, player: Player) -> list[Card]:
+        cards = list(player.hand)
+        if self._pending_draw and self._pending_draw[0] == index:
+            cards.append(self._pending_draw[1])
+        return cards

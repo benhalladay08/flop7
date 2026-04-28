@@ -1,3 +1,4 @@
+from flop7.core.classes.cards import FIVE, THREE
 from flop7.tui.widgets.player_list import PlayerListWidget
 
 from tests.conftest import make_players
@@ -23,3 +24,18 @@ class TestPlayerListDealerBadge:
 
         assert "[D]" in dealer_row
         assert "[D]" not in non_dealer_row
+
+
+class TestPlayerListPendingDraw:
+    def test_pending_draw_is_included_without_mutating_hand(self):
+        players = make_players(3)
+        players[1].hand = [THREE]
+        widget = PlayerListWidget(players, pending_draw=(1, FIVE))
+
+        cards = widget._cards_for_player(1, players[1])
+        row = widget._full_row(players[1], False, "Active", False, cards)
+
+        assert cards == [THREE, FIVE]
+        assert players[1].hand == [THREE]
+        assert "[3]" in row
+        assert "[5]" in row
