@@ -5,10 +5,11 @@ Flop 7 ships through several channels. Pick whichever fits your environment.
 ## Homebrew (recommended for macOS / Linux)
 
 ```bash
-brew install benhalladay08/tap/flop7
+brew tap benhalladay08/flop7
+brew install flop7
 ```
 
-This pulls from the `benhalladay08/tap` Homebrew tap and keeps the `flop7` CLI on your system PATH. Updates flow through `brew upgrade`.
+This pulls from the `benhalladay08/homebrew-flop7` tap and keeps the `flop7` CLI on your system PATH. Updates flow through `brew upgrade`.
 
 ## pipx
 

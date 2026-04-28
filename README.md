@@ -8,7 +8,8 @@ Really, this repo is made to **build and test different bot strategies.** See th
 
 ```bash
 # Homebrew (macOS / Linux)
-brew install benhalladay08/tap/flop7
+brew tap benhalladay08/flop7
+brew install flop7
 
 # pipx
 pipx install flop7
