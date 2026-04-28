@@ -47,9 +47,6 @@ jobs:
           - runner: macos-latest
             target: macos-arm64
             asset: flop7-macos-arm64.tar.gz
-          - runner: macos-13
-            target: macos-x86_64
-            asset: flop7-macos-x86_64.tar.gz
           - runner: ubuntu-latest
             target: linux-x86_64
             asset: flop7-linux-x86_64.tar.gz
@@ -102,7 +99,6 @@ jobs:
         run: |
           cd assets
           echo "macos_arm64=$(sha256sum flop7-macos-arm64.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-          echo "macos_x86_64=$(sha256sum flop7-macos-x86_64.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "linux_x86_64=$(sha256sum flop7-linux-x86_64.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Homebrew tap
@@ -116,7 +112,6 @@ jobs:
         env:
           VERSION: ${{ env.RELEASE_TAG }}
           SHA_MACOS_ARM64: ${{ steps.shas.outputs.macos_arm64 }}
-          SHA_MACOS_X86_64: ${{ steps.shas.outputs.macos_x86_64 }}
           SHA_LINUX_X86_64: ${{ steps.shas.outputs.linux_x86_64 }}
         run: |
           CLEAN_VERSION="${VERSION#v}"
@@ -131,13 +126,8 @@ jobs:
             version "${CLEAN_VERSION}"
 
             on_macos do
-              if Hardware::CPU.arm?
-                url "${BASE_URL}/flop7-macos-arm64.tar.gz"
-                sha256 "${SHA_MACOS_ARM64}"
-              else
-                url "${BASE_URL}/flop7-macos-x86_64.tar.gz"
-                sha256 "${SHA_MACOS_X86_64}"
-              end
+              url "${BASE_URL}/flop7-macos-arm64.tar.gz"
+              sha256 "${SHA_MACOS_ARM64}"
             end
 
             on_linux do
