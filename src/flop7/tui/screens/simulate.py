@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import urwid
 
 if TYPE_CHECKING:
-    from flop7.app.simulation import SimulationResults
+    from flop7.simulation import SimulationResults
 
 WIDE_THRESHOLD = 120
 
@@ -72,16 +72,20 @@ class SimulateScreen(urwid.WidgetWrap):
 
         lines: list[str] = []
         lines.append("")
-        lines.append("Win Rate by Bot Type:")
+        lines.append("Win Rate per Bot Seat:")
 
-        bot_types = sorted(results.wins_by_type.keys())
+        bot_types = sorted(results.bot_entries_by_type.keys())
         if not bot_types:
-            bot_types = sorted(results.games_by_type.keys())
+            bot_types = sorted(results.wins_by_type.keys())
         max_name = max((len(n) for n in bot_types), default=0)
         for name in bot_types:
             wins = results.wins_by_type.get(name, 0)
-            pct = results.win_pct(name)
-            lines.append(f"  {name:<{max_name}}  {pct:5.1f}%  ({wins:,} wins)")
+            entries = results.bot_entries_by_type.get(name, 0)
+            rate = results.win_rate(name)
+            lines.append(
+                f"  {name:<{max_name}}  {rate:5.1f}%  "
+                f"({wins:,} wins / {entries:,} entries)"
+            )
 
         lines.append("")
         lines.append(f"Avg Game Length:   {results.avg_game_length:.1f} rounds")

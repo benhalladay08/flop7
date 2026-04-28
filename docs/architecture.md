@@ -1,6 +1,6 @@
 # Architecture
 
-Flop 7 is split into four main layers:
+Flop 7 is split into five main layers:
 
 - `core` owns game state, card resolution, scoring, round lifecycle, and
   request/event objects. It has no terminal UI or bot strategy dependencies.
@@ -8,6 +8,7 @@ Flop 7 is split into four main layers:
   snapshots and return hit/stay or target choices through `BotController`.
 - `app` owns orchestration. It turns engine requests/events into prompt-driven
   nodes and coordinates screen transitions.
+- `simulation` runs all-bot game batches and aggregates simulation statistics.
 - `tui` owns urwid widgets and rendering. It consumes prompts and renders the
   current game or simulation state.
 

@@ -281,14 +281,14 @@ class TestSecondChanceTarget:
 class TestIntegration:
 
     def test_completes_full_game(self):
-        from flop7.app.simulation import run_game
+        from flop7.simulation import run_game
         engine = run_game({"Omniscient": 3})
         assert engine.game_over
         assert engine.winner is not None
 
     def test_beats_basic_more_often(self):
         """Over many games, Omniscient should win more than random chance."""
-        from flop7.app.simulation import run_game
+        from flop7.simulation import run_game
         omniscient_wins = 0
         games = 100
         for _ in range(games):

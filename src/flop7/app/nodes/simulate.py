@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from flop7.app.nodes.base import Node
 from flop7.app.prompt import Prompt
-from flop7.app.simulation import (
+from flop7.simulation import (
     SimulationResults,
     run_game,
     sample_game_config,
     validate_sim_config,
 )
-from flop7.app.trackers import default_trackers
+from flop7.simulation.trackers import default_trackers
 from flop7.bot.registry import Bot
 
 

@@ -206,7 +206,7 @@ class TestSimDoneNode:
 
     def test_returns_home_node(self):
         from flop7.app.nodes.home import HomeNode
-        from flop7.app.simulation import SimulationResults
+        from flop7.simulation import SimulationResults
 
         node = SimDoneNode(SimulationResults())
         context = {}
@@ -215,14 +215,14 @@ class TestSimDoneNode:
         assert context["_show_home"] is True
 
     def test_validator_rejects_non_home(self):
-        from flop7.app.simulation import SimulationResults
+        from flop7.simulation import SimulationResults
 
         node = SimDoneNode(SimulationResults())
         assert node.prompt.validator("quit") is not None
         assert node.prompt.validator("home") is None
 
     def test_cancelled_message(self):
-        from flop7.app.simulation import SimulationResults
+        from flop7.simulation import SimulationResults
 
         node = SimDoneNode(SimulationResults(), cancelled=True)
         assert "cancelled" in node.prompt.instruction.lower()

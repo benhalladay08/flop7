@@ -1,8 +1,6 @@
-"""Tests for flop7.app.simulation — simulation engine, sampling, and results."""
+"""Tests for simulation config, game running, and result aggregation."""
 
-import pytest
-
-from flop7.app.simulation import (
+from flop7.simulation import (
     SimulationResults,
     run_game,
     sample_game_config,
@@ -125,54 +123,52 @@ class TestSimulationResults:
             results.record({"Basic": 3}, engine)
         assert results.avg_winning_score >= 200
 
-    def test_win_pct_sums_to_100(self):
+    def test_win_rate_uses_bot_entries_as_denominator(self):
         results = SimulationResults()
-        for _ in range(20):
-            engine = run_game({"Basic": 3})
-            results.record({"Basic": 3}, engine)
-        assert abs(results.win_pct("Basic") - 100.0) < 0.01
+        engine = run_game({"Basic": 3})
+        results.record({"Basic": 3}, engine)
 
-    def test_win_pct_with_manual_multi_type_results(self):
-        """Verify win_pct logic with manually constructed multi-type data."""
+        assert abs(results.win_rate("Basic") - (100 / 3)) < 0.01
+
+    def test_win_rates_do_not_need_to_sum_to_100(self):
         results = SimulationResults()
         results.total_games = 100
         results.wins_by_type = {"TypeA": 60, "TypeB": 40}
-        results.games_by_type = {"TypeA": 200, "TypeB": 200}
+        results.bot_entries_by_type = {"TypeA": 200, "TypeB": 50}
         results.total_rounds = 800
         results.total_winning_scores = 21000
 
-        assert abs(results.win_pct("TypeA") - 60.0) < 0.01
-        assert abs(results.win_pct("TypeB") - 40.0) < 0.01
-        total_pct = results.win_pct("TypeA") + results.win_pct("TypeB")
-        assert abs(total_pct - 100.0) < 0.01
+        assert abs(results.win_rate("TypeA") - 30.0) < 0.01
+        assert abs(results.win_rate("TypeB") - 80.0) < 0.01
+        total_rate = results.win_rate("TypeA") + results.win_rate("TypeB")
+        assert abs(total_rate - 110.0) < 0.01
 
     def test_empty_results(self):
         results = SimulationResults()
         assert results.avg_game_length == 0.0
         assert results.avg_winning_score == 0.0
-        assert results.win_pct("Basic") == 0.0
+        assert results.win_rate("Basic") == 0.0
 
-    def test_games_by_type_tracks_participation(self):
+    def test_bot_entries_by_type_tracks_participation(self):
         results = SimulationResults()
         engine = run_game({"Basic": 3})
         results.record({"Basic": 3}, engine)
-        assert results.games_by_type["Basic"] == 3
+        assert results.bot_entries_by_type["Basic"] == 3
 
 
 class TestRunGameWithTrackers:
 
     def test_trackers_receive_events(self):
-        from flop7.app.trackers import default_trackers
+        from flop7.simulation.trackers import default_trackers
 
         trackers = default_trackers()
-        engine = run_game({"Basic": 3}, trackers=trackers)
+        run_game({"Basic": 3}, trackers=trackers)
 
-        # After a full game, bust tracker should have seen at least some events
-        bust_tracker = trackers[2]  # BustTracker
+        bust_tracker = trackers[2]
         assert bust_tracker._games == 1
 
     def test_flip7_tracker_accumulates_across_games(self):
-        from flop7.app.trackers import Flip7Tracker
+        from flop7.simulation.trackers import Flip7Tracker
 
         tracker = Flip7Tracker()
         for _ in range(5):
@@ -180,7 +176,7 @@ class TestRunGameWithTrackers:
         assert tracker._games == 5
 
     def test_results_with_trackers_field(self):
-        from flop7.app.trackers import default_trackers
+        from flop7.simulation.trackers import default_trackers
 
         trackers = default_trackers()
         results = SimulationResults(trackers=trackers)
