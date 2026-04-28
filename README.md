@@ -1,25 +1,26 @@
 # Flop 7
 
-An unofficial terminal implementation of the Flip 7 card game. The app can run
-virtual games, act as a scorekeeper for real games, and simulate batches of
-bot-only games.
+Welcome to Flop 7, the unofficial terminal emulator for Flip 7. You can play virtual games, keep score for live games at the table, or run batched all-bot simulations to benchmark your own strategies.
 
-## Requirements
-
-- Python 3.10+
-- `urwid`
+Really, this repo is made to **build and test different bot strategies.** See the [bot guide](docs/guides/bots.md) for more info.
 
 ## Install
 
 ```bash
-pip install .
+# Homebrew (macOS / Linux)
+brew install benhalladay08/tap/flop7
+
+# pipx
+pipx install flop7
+
+# pip
+pip install flop7
+
+# install.sh (downloads the latest release binary)
+curl -fsSL https://raw.githubusercontent.com/benhalladay08/flop7/main/install.sh | sh
 ```
 
-For local development:
-
-```bash
-python -m pip install -e .
-```
+For full options including local development installs, see [docs/install.md](docs/install.md).
 
 ## Run
 
@@ -27,20 +28,19 @@ python -m pip install -e .
 flop7
 ```
 
-or:
+## Documentation
 
-```bash
-python -m flop7
-```
+- [Install](docs/install.md) — distribution channels and platform notes
+- [Rules](docs/rules.md) — Flip 7 game rules
+- [Architecture](docs/architecture.md) — comprehensive layer-by-layer reference
+- [Roadmap](docs/roadmap.md) — planned features
 
-## Test
+### Guides
 
-```bash
-pytest
-```
+- [Local development](docs/guides/development.md) — clone, run, and test the repo
+- [Building bots](docs/guides/bots.md) — write a new bot, register it, and benchmark it
+- [Building trackers](docs/guides/trackers.md) — collect custom statistics across simulation batches
 
-## Docs
+## Contributing
 
-- [Rules](docs/rules.md)
-- [Design](docs/design.md)
-- [Architecture](docs/architecture.md)
+See [CONTRIBUTING.md](CONTRIBUTING.md).

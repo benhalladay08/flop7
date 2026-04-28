@@ -1,0 +1,76 @@
+# Contributing to Flop 7
+
+Flop 7 exists primarily as a sandbox for **designing and benchmarking Flip 7 bots**, so most contributions land in the `bot/` and `simulation/` modules — but architecture, TUI, and core-engine improvements are equally welcome.
+
+## Quick links
+
+- [Roadmap of future features](docs/roadmap.md)
+- [Local development setup](docs/guides/development.md)
+- [Building a new bot](docs/guides/bots.md)
+- [Building a new simulation tracker](docs/guides/trackers.md)
+- [Architecture overview](docs/architecture.md)
+
+## Workflow
+
+1. Fork the repo and create a feature branch off `main`.
+2. Install in editable mode: `python -m pip install -e .`
+3. Make your change. Add tests under `tests/` mirroring the source layout.
+4. Run the full test suite: `pytest`
+5. Open a pull request against `main`.
+
+## Commit conventions
+
+Flop 7 uses [Conventional Commits](https://www.conventionalcommits.org/) so that [release-please](https://github.com/googleapis/release-please) can automate version bumps from commit history.
+
+| Prefix      | Use for                                       | Version bump |
+| ----------- | --------------------------------------------- | ------------ |
+| `feat:`     | New user-facing feature                       | minor        |
+| `fix:`      | Bug fix                                       | patch        |
+| `chore:`    | Tooling, CI, dependencies                     | none         |
+| `docs:`     | Documentation only                            | none         |
+| `refactor:` | Internal change with no behavior change       | none         |
+| `test:`     | Tests only                                    | none         |
+
+Add `!` after the type (e.g. `feat!: ...`) or include a `BREAKING CHANGE:` footer for breaking changes — these trigger a major bump.
+
+Examples:
+
+```
+feat: add aggressive bot model with deeper EV search
+fix: correct Second Chance discard ordering on duplicate Flip Three
+docs: clarify tracker registration in default_trackers
+```
+
+## Code style
+
+Pre-commit hooks (ruff + black) are planned. Until they land, please keep new code consistent with the surrounding files:
+
+- Type hints on public functions and dataclass fields
+- `from __future__ import annotations` at the top of files using forward references
+- Imports grouped: stdlib → third-party → first-party (`flop7.*`) → local
+
+## Tests
+
+Run the suite with:
+
+```bash
+pytest
+```
+
+Test layout mirrors `src/flop7/`. Fixtures live in [`tests/conftest.py`](tests/conftest.py) — `make_engine`, `make_deck`, `make_players`, and `drive_round` are the building blocks for almost every engine-level test.
+
+Every behavior change should ship with a test. If you're adding a new bot or tracker, mirror the patterns in `tests/bot/models/test_basic.py` and `tests/simulation/test_runner.py`.
+
+## Reporting bugs and proposing features
+
+Open a GitHub issue with:
+
+- What you expected to happen
+- What actually happened
+- A minimal reproduction (a bot config, a simulation seed, or a card sequence)
+
+For larger features, sketch the idea on the [roadmap](docs/roadmap.md) discussion or open an issue first — it saves rework.
+
+## Project rule: extend, don't reimplement
+
+The core engine yields requests and events through a generator. **Do not duplicate engine logic** in bots, trackers, or app nodes — extend it through the existing hook points (`hit_stay`, `target_selector`, tracker `on_event`, engine listeners). If you need a new hook, add it to the engine and document it.

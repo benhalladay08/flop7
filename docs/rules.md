@@ -208,6 +208,15 @@ x2 modifier:   28 × 2       = 56
 
 ---
 
+## Strategy Tips
+
+- The deck is weighted toward higher numbers (12× more 12s than 1s), which raises both expected value and bust risk for high cards.
+- Zero cards are worth no points but still count toward the Flip 7 bonus, making them valuable filler.
+- Tracking which numbers have already been played is the simplest way to assess bust risk on your next hit.
+- Modifier cards never bust and never count toward Flip 7 — they're pure upside.
+
+---
+
 ## Player Decision Flow
 
 The diagram below covers every branch a player (or AI agent) must handle on their turn.
