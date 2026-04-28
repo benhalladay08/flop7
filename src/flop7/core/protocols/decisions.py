@@ -23,6 +23,7 @@ class HitStay(Protocol):
         Return True to hit, False to stay.
         """
 
+
 class TargetSelector(Protocol):
     def __call__(
         self,

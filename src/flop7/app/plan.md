@@ -1,1 +1,0 @@
-This file will hold the top level orchestration. TUI will just be interface, and when a command is recieved from the command bar, it'll be passed back here.

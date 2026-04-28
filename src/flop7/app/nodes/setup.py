@@ -28,7 +28,7 @@ How would you like to play?
 
 
 def _game_mode_validator(text: str) -> str | None:
-    if text.lower() in ("virtual", "real"):
+    if text.strip().lower() in ("virtual", "real"):
         return None
     return "Type 'virtual' or 'real'."
 
@@ -42,7 +42,7 @@ class GameModeNode(Node):
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        context["game_mode"] = value.lower()
+        context["game_mode"] = value.strip().lower()
         return PlayerCountNode()
 
 
@@ -58,6 +58,7 @@ difference. If you select 10 human players, no bots can be added.\
 
 
 def _player_count_validator(text: str) -> str | None:
+    text = text.strip()
     if not text.isdigit():
         return "Enter a whole number between 1 and 10."
     n = int(text)
@@ -75,7 +76,7 @@ class PlayerCountNode(Node):
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        count = int(value)
+        count = int(value.strip())
         context["player_count"] = count
         context["player_names"] = []
         return PlayerNameNode(index=1, total=count)
@@ -84,6 +85,7 @@ class PlayerCountNode(Node):
 # ── Player names ─────────────────────────────────────────────────────────
 
 def _player_name_validator(text: str) -> str | None:
+    text = text.strip()
     if not text:
         return "Name cannot be empty."
     if len(text) > 20:
@@ -113,10 +115,14 @@ class PlayerNameNode(Node):
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        updated = self._names + [value]
+        updated = self._names + [value.strip()]
         context["player_names"] = updated
         if self._index < self._total:
-            return PlayerNameNode(index=self._index + 1, total=self._total, names=updated)
+            return PlayerNameNode(
+                index=self._index + 1,
+                total=self._total,
+                names=updated,
+            )
 
         # All human players named — move to bot selection
         player_count = self._total
@@ -127,13 +133,17 @@ class PlayerNameNode(Node):
             context["bot_types"] = []
             return SetupCompleteNode()
 
-        return BotCountNode(player_count=player_count, game_mode=context.get("game_mode", "virtual"))
+        return BotCountNode(
+            player_count=player_count,
+            game_mode=context.get("game_mode", "virtual"),
+        )
 
 
 # ── Bot count ────────────────────────────────────────────────────────────────
 
 def _make_bot_count_validator(min_bots: int, max_bots: int):
     def validator(text: str) -> str | None:
+        text = text.strip()
         if not text.isdigit():
             return f"Enter a number between {min_bots} and {max_bots}."
         n = int(text)
@@ -169,7 +179,7 @@ class BotCountNode(Node):
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        count = int(value)
+        count = int(value.strip())
         context["bot_count"] = count
         context["bot_types"] = []
         if count == 0:
@@ -189,7 +199,7 @@ def _make_bot_type_validator(valid_names: list[str]):
     options = ", ".join(f"'{n}'" for n in valid_names)
 
     def validator(text: str) -> str | None:
-        if text.lower() in lower_names:
+        if text.strip().lower() in lower_names:
             return None
         return f"Choose one of: {options}."
 
@@ -226,7 +236,7 @@ class BotTypeNode(Node):
 
     def on_input(self, value: str, context: dict) -> Node | None:
         canonical = next(
-            n for n in self._valid_names if n.lower() == value.lower()
+            n for n in self._valid_names if n.lower() == value.strip().lower()
         )
         updated = self._types + [canonical]
         context["bot_types"] = updated

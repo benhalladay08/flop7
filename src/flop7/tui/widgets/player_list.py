@@ -21,11 +21,10 @@ def _card_tag(card: Card) -> str:
 
 def player_status(player: Player) -> str:
     """Determine display status: 'Active', 'Stayed', or 'Busted'."""
+    if player.busted:
+        return "Busted"
     if player.is_active:
         return "Active"
-    bustable_names = [c.name for c in player.hand if c.bustable]
-    if len(bustable_names) != len(set(bustable_names)):
-        return "Busted"
     return "Stayed"
 
 

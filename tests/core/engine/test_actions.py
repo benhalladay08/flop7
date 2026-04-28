@@ -536,7 +536,10 @@ class TestFlipThreeEvents:
         )
 
         start_idx = next(i for i, e in enumerate(events) if isinstance(e, FlipThreeStartEvent))
-        resolved_idx = next(i for i, e in enumerate(events) if isinstance(e, FlipThreeResolvedEvent))
+        resolved_idx = next(
+            i for i, e in enumerate(events)
+            if isinstance(e, FlipThreeResolvedEvent)
+        )
         # The 3 forced draws all happen between FlipThreeStartEvent and FlipThreeResolvedEvent
         forced_draw_idxs = [
             i for i, e in enumerate(events)

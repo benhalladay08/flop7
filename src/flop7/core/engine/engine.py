@@ -99,7 +99,7 @@ class GameEngine:
                         req = gen.send(None)
                 except StopIteration:
                     break
-    
+
     def round(self):
         """Generator for one round of play.
 

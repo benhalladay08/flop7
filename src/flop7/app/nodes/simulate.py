@@ -328,7 +328,9 @@ class SimDoneNode(Node):
             )
         return Prompt(
             instruction=msg,
-            validator=lambda t: None if t.lower() == "home" else "Type 'home'.",
+            validator=lambda t: (
+                None if t.strip().lower() == "home" else "Type 'home'."
+            ),
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:

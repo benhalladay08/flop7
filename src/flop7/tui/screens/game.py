@@ -115,7 +115,7 @@ class GameScreen(urwid.WidgetWrap):
         )
 
         detail_title = ""
-        detail_cards: list = []
+        detail_cards: list[Card] = []
         if focused:
             status = player_status(focused)
             detail_title = f"{focused.name} ({status})"

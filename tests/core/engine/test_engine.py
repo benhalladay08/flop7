@@ -33,7 +33,14 @@ from flop7.core.engine.requests import (
     RoundOverEvent,
 )
 
-from tests.conftest import OPENING_CARDS, drive_round, make_deck, make_engine, make_players, opening_cards
+from tests.conftest import (
+    OPENING_CARDS,
+    drive_round,
+    make_deck,
+    make_engine,
+    make_players,
+    opening_cards,
+)
 
 
 class TestConstructor:

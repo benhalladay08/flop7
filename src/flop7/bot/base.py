@@ -16,7 +16,8 @@ class AbstractBot(ABC):
     game-state views.
     """
 
-    virtual_only: bool = False  # Whether this bot can only be used in a virtual game (e.g. relies on perfect information)
+    # True for bots that rely on perfect information only available in virtual games.
+    virtual_only: bool = False
 
     @abstractmethod
     def hit_stay(self, view: GameView, player: PlayerView) -> bool:

@@ -1,5 +1,5 @@
 from flop7.core.classes.cards import FIVE, THREE
-from flop7.tui.widgets.player_list import PlayerListWidget
+from flop7.tui.widgets.player_list import PlayerListWidget, player_status
 
 from tests.conftest import make_players
 
@@ -39,3 +39,13 @@ class TestPlayerListPendingDraw:
         assert players[1].hand == [THREE]
         assert "[3]" in row
         assert "[5]" in row
+
+
+class TestPlayerStatus:
+    def test_busted_state_uses_explicit_player_flag(self):
+        player = make_players(1)[0]
+        player.is_active = False
+        player.busted = True
+        player.hand = [FIVE]
+
+        assert player_status(player) == "Busted"

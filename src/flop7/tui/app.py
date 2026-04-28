@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import urwid
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class TUIApp:
-    def __init__(self, user_command: callable):
+    def __init__(self, user_command: Callable[[str], None]):
         self.user_command = user_command
         self.command_bar = CommandBar()
         self.home = HomeScreen()
@@ -135,7 +136,7 @@ class TUIApp:
 
     def _on_submitted(self, text: str) -> None:
         self._cancel_auto_advance()
-        if text.lower() == "exit":
+        if text.strip().lower() == "exit":
             self.show_quit_dialog()
             return
         self.user_command(text)

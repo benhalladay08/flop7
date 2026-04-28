@@ -26,7 +26,7 @@ Enter one of the following commands in the command bar to proceed.
 
 
 def _home_validator(text: str) -> str | None:
-    if text.lower() in ("play", "simulate"):
+    if text.strip().lower() in ("play", "simulate", "exit"):
         return None
     return "Unknown command. Type 'play', 'simulate', or 'exit'."
 
@@ -42,7 +42,7 @@ class HomeNode(Node):
     def on_input(self, value: str, context: dict) -> Node | None:
         from flop7.app.nodes.setup import GameModeNode  # avoid circular import
 
-        cmd = value.lower()
+        cmd = value.strip().lower()
         if cmd == "play":
             return GameModeNode()
         if cmd == "simulate":
