@@ -1,4 +1,5 @@
 """Tests for flop7.core.classes.cards — card definitions and deck composition."""
+
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -6,28 +7,28 @@ import pytest
 from flop7.core.classes.cards import (
     ALL_CARDS,
     CARD_MAP,
+    EIGHT,
+    ELEVEN,
+    FIVE,
     FLIP_THREE,
+    FOUR,
     FREEZE,
-    SECOND_CHANCE,
-    PLUS_TWO,
+    NINE,
+    ONE,
+    PLUS_EIGHT,
     PLUS_FOUR,
     PLUS_SIX,
-    PLUS_EIGHT,
     PLUS_TEN,
-    TIMES_TWO,
-    ZERO,
-    ONE,
-    TWO,
-    THREE,
-    FOUR,
-    FIVE,
-    SIX,
+    PLUS_TWO,
+    SECOND_CHANCE,
     SEVEN,
-    EIGHT,
-    NINE,
+    SIX,
     TEN,
-    ELEVEN,
+    THREE,
+    TIMES_TWO,
     TWELVE,
+    TWO,
+    ZERO,
 )
 
 # All 13 number cards in order
@@ -59,21 +60,24 @@ class TestDeckComposition:
 class TestNumberCards:
     """Each number card N has num_in_deck == N, except 0 which has 1."""
 
-    @pytest.mark.parametrize("card,expected", [
-        (ZERO, 1),
-        (ONE, 1),
-        (TWO, 2),
-        (THREE, 3),
-        (FOUR, 4),
-        (FIVE, 5),
-        (SIX, 6),
-        (SEVEN, 7),
-        (EIGHT, 8),
-        (NINE, 9),
-        (TEN, 10),
-        (ELEVEN, 11),
-        (TWELVE, 12),
-    ])
+    @pytest.mark.parametrize(
+        "card,expected",
+        [
+            (ZERO, 1),
+            (ONE, 1),
+            (TWO, 2),
+            (THREE, 3),
+            (FOUR, 4),
+            (FIVE, 5),
+            (SIX, 6),
+            (SEVEN, 7),
+            (EIGHT, 8),
+            (NINE, 9),
+            (TEN, 10),
+            (ELEVEN, 11),
+            (TWELVE, 12),
+        ],
+    )
     def test_num_in_deck_equals_face_value(self, card, expected):
         assert card.num_in_deck == expected
 
@@ -111,14 +115,17 @@ class TestModifierCards:
     def test_not_bustable(self, card):
         assert card.bustable is False
 
-    @pytest.mark.parametrize("card,expected_points", [
-        (PLUS_TWO, 2),
-        (PLUS_FOUR, 4),
-        (PLUS_SIX, 6),
-        (PLUS_EIGHT, 8),
-        (PLUS_TEN, 10),
-        (TIMES_TWO, 0),
-    ])
+    @pytest.mark.parametrize(
+        "card,expected_points",
+        [
+            (PLUS_TWO, 2),
+            (PLUS_FOUR, 4),
+            (PLUS_SIX, 6),
+            (PLUS_EIGHT, 8),
+            (PLUS_TEN, 10),
+            (TIMES_TWO, 0),
+        ],
+    )
     def test_points(self, card, expected_points):
         assert card.points == expected_points
 
@@ -130,13 +137,16 @@ class TestModifierCards:
         assert TIMES_TWO.score_modifier(0) == 0
 
     # Flat modifiers
-    @pytest.mark.parametrize("card,base,expected", [
-        (PLUS_TWO, 10, 12),
-        (PLUS_FOUR, 10, 14),
-        (PLUS_SIX, 10, 16),
-        (PLUS_EIGHT, 10, 18),
-        (PLUS_TEN, 10, 20),
-    ])
+    @pytest.mark.parametrize(
+        "card,base,expected",
+        [
+            (PLUS_TWO, 10, 12),
+            (PLUS_FOUR, 10, 14),
+            (PLUS_SIX, 10, 16),
+            (PLUS_EIGHT, 10, 18),
+            (PLUS_TEN, 10, 20),
+        ],
+    )
     def test_flat_modifier_adds_correctly(self, card, base, expected):
         assert card.score_modifier(base) == expected
 

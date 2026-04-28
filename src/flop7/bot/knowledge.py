@@ -103,18 +103,9 @@ def build_deck_view(deck: Deck, reveal_draw_order: bool) -> DeckView:
 
 
 def build_game_view(game: GameEngine) -> GameView:
-    players = tuple(
-        build_player_view(index, player)
-        for index, player in enumerate(game.players)
-    )
-    active_player_indexes = tuple(
-        player.index for player in players if player.is_active
-    )
-    winner_index = (
-        game.players.index(game.winner)
-        if game.winner in game.players
-        else None
-    )
+    players = tuple(build_player_view(index, player) for index, player in enumerate(game.players))
+    active_player_indexes = tuple(player.index for player in players if player.is_active)
+    winner_index = game.players.index(game.winner) if game.winner in game.players else None
     return GameView(
         players=players,
         active_player_indexes=active_player_indexes,

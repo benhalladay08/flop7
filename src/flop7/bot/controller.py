@@ -33,9 +33,7 @@ class BotController:
         source_index = self._player_index(game, source)
         bot = self._bot_for_index(source_index)
         view = build_game_view(game)
-        eligible_indexes = tuple(
-            self._player_index(game, player) for player in eligible
-        )
+        eligible_indexes = tuple(self._player_index(game, player) for player in eligible)
         eligible_views = tuple(view.players[index] for index in eligible_indexes)
 
         selected = bot.target_selector(
@@ -46,8 +44,7 @@ class BotController:
         )
         if selected.index not in eligible_indexes:
             raise ValueError(
-                f"Bot selected ineligible target index {selected.index} "
-                f"for {event.name}."
+                f"Bot selected ineligible target index {selected.index} " f"for {event.name}."
             )
         return game.players[selected.index]
 

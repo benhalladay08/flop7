@@ -1,13 +1,4 @@
 from flop7.app.nodes.base import Node
-from flop7.app.nodes.home import HomeNode
-from flop7.app.nodes.setup import (
-    GameModeNode,
-    PlayerCountNode,
-    PlayerNameNode,
-    BotCountNode,
-    BotTypeNode,
-    SetupCompleteNode,
-)
 from flop7.app.nodes.game import (
     BotDecisionNode,
     BustNode,
@@ -20,6 +11,15 @@ from flop7.app.nodes.game import (
     RoundOverNode,
     SpecialResolvedNode,
     TargetSelectNode,
+)
+from flop7.app.nodes.home import HomeNode
+from flop7.app.nodes.setup import (
+    BotCountNode,
+    BotTypeNode,
+    GameModeNode,
+    PlayerCountNode,
+    PlayerNameNode,
+    SetupCompleteNode,
 )
 from flop7.app.nodes.simulate import (
     SimBotConfigNode,

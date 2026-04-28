@@ -102,9 +102,7 @@ class GameScreen(urwid.WidgetWrap):
         )
 
     def _build_wide(self) -> urwid.Widget:
-        focused = (
-            self._players[self._focused_idx] if self._players else None
-        )
+        focused = self._players[self._focused_idx] if self._players else None
 
         player_list = PlayerListWidget(
             self._players,
@@ -126,10 +124,12 @@ class GameScreen(urwid.WidgetWrap):
             player_name=detail_title,
         )
 
-        return urwid.Columns([
-            ("weight", 1, player_list),
-            ("weight", 3, card_detail),
-        ])
+        return urwid.Columns(
+            [
+                ("weight", 1, player_list),
+                ("weight", 3, card_detail),
+            ]
+        )
 
     def _cards_for_player(self, index: int, player: Player) -> list[Card]:
         cards = list(player.hand)

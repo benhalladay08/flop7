@@ -1,10 +1,9 @@
 """Shared fixtures and helpers for core module tests."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any
-
-import pytest
 
 from flop7.core.classes.cards import Card
 from flop7.core.classes.deck import Deck
@@ -12,14 +11,9 @@ from flop7.core.classes.player import Player
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
     CardDrawRequest,
-    CardDrawnEvent,
-    Flip7Event,
     HitStayRequest,
-    PlayerBustedEvent,
-    RoundOverEvent,
     TargetRequest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Opening-round filler cards
@@ -40,6 +34,7 @@ def opening_cards(*player_indexes: int) -> list[Card]:
 # ---------------------------------------------------------------------------
 # Factory helpers
 # ---------------------------------------------------------------------------
+
 
 def make_deck(cards: list[Card]) -> Deck:
     """Build a Deck whose deal() returns *cards* in order."""
@@ -97,6 +92,7 @@ def make_engine(
 # Generator driver
 # ---------------------------------------------------------------------------
 
+
 def drive_round(
     engine: GameEngine,
     hit_responses: list[bool] | None = None,
@@ -139,8 +135,13 @@ def drive_round(
             elif isinstance(req, TargetRequest):
                 req = gen.send(next_response(target_iter, "target"))
             elif isinstance(req, CardDrawRequest):
-                card = engine.deck.deal() if auto_deal else next_response(
-                    card_iter, "card draw",
+                card = (
+                    engine.deck.deal()
+                    if auto_deal
+                    else next_response(
+                        card_iter,
+                        "card draw",
+                    )
                 )
                 req = gen.send(card)
             else:

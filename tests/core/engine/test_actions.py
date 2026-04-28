@@ -5,17 +5,17 @@ import pytest
 from flop7.core.classes.cards import (
     ALL_CARDS,
     FIVE,
-    THREE,
-    SEVEN,
     FLIP_THREE,
     FREEZE,
     SECOND_CHANCE,
+    SEVEN,
+    THREE,
 )
-from flop7.core.engine.actions import get_action, flip_three, freeze, second_chance
+from flop7.core.engine.actions import flip_three, freeze, get_action, second_chance
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
-    CardDrawRequest,
     CardDrawnEvent,
+    CardDrawRequest,
     FlipThreeResolvedEvent,
     FlipThreeStartEvent,
     FreezeEvent,
@@ -24,7 +24,6 @@ from flop7.core.engine.requests import (
     SecondChanceEvent,
     TargetRequest,
 )
-
 from tests.conftest import drive_round, make_deck, make_players, opening_cards
 
 ACTION_HANDLERS = [
@@ -98,7 +97,8 @@ class TestFlipThree:
         )
 
         drawn_for_p2 = [
-            event.card for event in events
+            event.card
+            for event in events
             if isinstance(event, CardDrawnEvent) and event.player is p2
         ]
         assert drawn_for_p2[-3:] == [FIVE, THREE, SEVEN]
@@ -141,8 +141,10 @@ class TestFlipThree:
         assert bust_events[0].player is p2
 
         forced_drawn_for_p2 = [
-            event.card for event in events
-            if isinstance(event, CardDrawnEvent) and event.player is p2
+            event.card
+            for event in events
+            if isinstance(event, CardDrawnEvent)
+            and event.player is p2
             and event.card in (FIVE, THREE, SEVEN)
         ]
         assert forced_drawn_for_p2 == [FIVE]
@@ -171,12 +173,14 @@ class TestFlipThree:
         )
 
         drawn_for_p2 = [
-            event.card for event in events
+            event.card
+            for event in events
             if isinstance(event, CardDrawnEvent) and event.player is p2
         ]
         assert drawn_for_p2[-3:] == [FIVE, SECOND_CHANCE, THREE]
         sc_targets = [
-            event for event in events
+            event
+            for event in events
             if isinstance(event, TargetRequest) and event.event.name == "SECOND_CHANCE"
         ]
         assert sc_targets == []
@@ -193,7 +197,8 @@ class TestFlipThree:
         )
 
         sc_targets = [
-            event for event in events
+            event
+            for event in events
             if isinstance(event, TargetRequest) and event.event.name == "SECOND_CHANCE"
         ]
         assert len(sc_targets) == 1
@@ -228,7 +233,8 @@ class TestFlipThree:
         )
 
         drawn_for_p1 = [
-            event.card for event in events
+            event.card
+            for event in events
             if isinstance(event, CardDrawnEvent) and event.player is p1
         ]
         assert drawn_for_p1[1:] == [FLIP_THREE, FIVE, THREE, SEVEN]
@@ -372,7 +378,8 @@ class TestSecondChance:
 
         assert p1.score == 0
         sc_targets = [
-            event for event in events
+            event
+            for event in events
             if isinstance(event, TargetRequest) and event.event.name == "SECOND_CHANCE"
         ]
         assert sc_targets == []
@@ -419,7 +426,8 @@ class TestSecondChance:
         )
 
         sc_targets = [
-            event for event in events
+            event
+            for event in events
             if isinstance(event, TargetRequest) and event.event.name == "SECOND_CHANCE"
         ]
         assert len(sc_targets) == 1
@@ -443,7 +451,8 @@ class TestSecondChance:
         assert len(sc_in_discard) >= 1
 
         sc_targets = [
-            event for event in events
+            event
+            for event in events
             if isinstance(event, TargetRequest) and event.event.name == "SECOND_CHANCE"
         ]
         assert len(sc_targets) == 0
@@ -532,12 +541,12 @@ class TestFlipThreeEvents:
 
         start_idx = next(i for i, e in enumerate(events) if isinstance(e, FlipThreeStartEvent))
         resolved_idx = next(
-            i for i, e in enumerate(events)
-            if isinstance(e, FlipThreeResolvedEvent)
+            i for i, e in enumerate(events) if isinstance(e, FlipThreeResolvedEvent)
         )
         # The 3 forced draws all happen between FlipThreeStartEvent and FlipThreeResolvedEvent
         forced_draw_idxs = [
-            i for i, e in enumerate(events)
+            i
+            for i, e in enumerate(events)
             if isinstance(e, CardDrawnEvent) and e.player is p2 and start_idx < i < resolved_idx
         ]
         assert len(forced_draw_idxs) == 3

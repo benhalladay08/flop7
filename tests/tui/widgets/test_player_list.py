@@ -1,6 +1,5 @@
 from flop7.core.classes.cards import FIVE, THREE
 from flop7.tui.widgets.player_list import PlayerListWidget, player_status
-
 from tests.conftest import make_players
 
 

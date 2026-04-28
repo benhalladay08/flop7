@@ -6,7 +6,6 @@ import pytest
 
 from flop7.bot.knowledge import build_game_view
 from flop7.core.classes.cards import FIVE, SECOND_CHANCE, SEVEN, TEN, THREE
-
 from tests.conftest import make_engine
 
 

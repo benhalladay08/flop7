@@ -39,7 +39,9 @@ def flip_three(game: GameEngine, player: Player, card: Card):
     """
     eligible = list(game.active_players)
     target = yield TargetRequest(
-        event=TargetEvent.FLIP_THREE, source=player, eligible=eligible,
+        event=TargetEvent.FLIP_THREE,
+        source=player,
+        eligible=eligible,
     )
     _validate_target(TargetEvent.FLIP_THREE, target, eligible)
     yield FlipThreeStartEvent(source=player, target=target)
@@ -73,7 +75,9 @@ def freeze(game: GameEngine, player: Player, card: Card):
     """
     eligible = list(game.active_players)
     target = yield TargetRequest(
-        event=TargetEvent.FREEZE, source=player, eligible=eligible,
+        event=TargetEvent.FREEZE,
+        source=player,
+        eligible=eligible,
     )
     _validate_target(TargetEvent.FREEZE, target, eligible)
     target.hand.append(card)
@@ -91,16 +95,15 @@ def second_chance(game: GameEngine, player: Player, card: Card):
         yield SecondChanceEvent(source=player, target=player)
         return
 
-    eligible = [
-        p for p in game.active_players
-        if p is not player and not p.has_card(SECOND_CHANCE)
-    ]
+    eligible = [p for p in game.active_players if p is not player and not p.has_card(SECOND_CHANCE)]
     if not eligible:
         game.deck.discard([card])
         return
 
     target = yield TargetRequest(
-        event=TargetEvent.SECOND_CHANCE, source=player, eligible=eligible,
+        event=TargetEvent.SECOND_CHANCE,
+        source=player,
+        eligible=eligible,
     )
     _validate_target(TargetEvent.SECOND_CHANCE, target, eligible)
     if target.has_card(SECOND_CHANCE):

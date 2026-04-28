@@ -23,8 +23,8 @@ from flop7.core.classes.cards import (
     TIMES_TWO,
 )
 from flop7.core.engine.requests import (
-    CardDrawRequest,
     CardDrawnEvent,
+    CardDrawRequest,
     Flip7Event,
     FlipThreeResolvedEvent,
     FlipThreeStartEvent,
@@ -56,6 +56,7 @@ _VALID_CARD_DISPLAY = "0–12, +2, +4, +6, +8, +10, x2, F3, FZ, SC"
 
 
 # ── Engine builder ───────────────────────────────────────────────────
+
 
 def _build_engine(context: dict):
     """Construct a GameEngine from the accumulated setup context."""
@@ -108,6 +109,7 @@ def _build_engine(context: dict):
 
 # ── Validators ───────────────────────────────────────────────────────
 
+
 def _hit_stay_validator(text: str) -> str | None:
     if text.strip().lower() in ("hit", "stay"):
         return None
@@ -136,6 +138,7 @@ def _action_label(event: TargetEvent) -> str:
 
 
 # ── Round-level dispatcher ───────────────────────────────────────────
+
 
 class GameRoundNode(Node):
     """Owns the engine's ``round()`` generator and dispatches yielded
@@ -189,11 +192,13 @@ class GameRoundNode(Node):
                 return SpecialResolvedNode(self, f"{t.name} is frozen!")
             case SecondChanceEvent(target=t):
                 return SpecialResolvedNode(
-                    self, f"{t.name} received Second Chance.",
+                    self,
+                    f"{t.name} received Second Chance.",
                 )
             case FlipThreeStartEvent(source=s, target=t):
                 return SpecialResolvedNode(
-                    self, f"{s.name} plays Flip Three on {t.name}!",
+                    self,
+                    f"{s.name} plays Flip Three on {t.name}!",
                 )
             case FlipThreeResolvedEvent(target=t):
                 return SpecialResolvedNode(self, f"Flip Three resolved for {t.name}.")
@@ -261,6 +266,7 @@ class GameRoundNode(Node):
 
 # ── Notification (auto-advance) nodes ────────────────────────────────
 
+
 class _NotificationNode(Node):
     """Base for nodes that show a message and auto-advance after 2s."""
 
@@ -304,6 +310,7 @@ class SpecialResolvedNode(_NotificationNode):
 
 # ── Bot decision (notification with pre-computed answer) ─────────────
 
+
 class BotDecisionNode(Node):
     """Display and auto-advance the bot's hit/stay decision.
 
@@ -315,7 +322,8 @@ class BotDecisionNode(Node):
         self._round = round_node
         self._player = player
         self._decision = round_node.bot_controller.hit_stay(
-            round_node.engine, player,
+            round_node.engine,
+            player,
         )
 
     @property
@@ -332,6 +340,7 @@ class BotDecisionNode(Node):
 
 
 # ── Input nodes ──────────────────────────────────────────────────────
+
 
 class HitStayNode(Node):
     """Prompt a human player to hit or stay."""
@@ -365,8 +374,7 @@ class DrawCardNode(Node):
             raise RuntimeError("Virtual draw nodes are resolved by dispatch().")
         return Prompt(
             instruction=(
-                f"What card did {self._player.name} draw?\n"
-                f"Valid: {_VALID_CARD_DISPLAY}"
+                f"What card did {self._player.name} draw?\n" f"Valid: {_VALID_CARD_DISPLAY}"
             ),
             validator=_card_input_validator,
         )
@@ -393,7 +401,8 @@ class TargetSelectNode(Node):
         self._round = round_node
         self._request = request
         self._is_bot = round_node.bot_controller.has_bot(
-            round_node.engine, request.source,
+            round_node.engine,
+            request.source,
         )
         self._bot_target = None
         if self._is_bot:
@@ -420,8 +429,7 @@ class TargetSelectNode(Node):
         names = [p.name for p in req.eligible]
         return Prompt(
             instruction=(
-                f"{req.source.name} drew {label}!\n"
-                f"Choose a target: {', '.join(names)}"
+                f"{req.source.name} drew {label}!\n" f"Choose a target: {', '.join(names)}"
             ),
             validator=_make_target_validator(names),
         )
@@ -436,6 +444,7 @@ class TargetSelectNode(Node):
 
 # ── Round / game over ────────────────────────────────────────────────
 
+
 class RoundOverNode(Node):
     """Display the scoreboard and wait for Enter (no auto-advance)."""
 
@@ -445,9 +454,7 @@ class RoundOverNode(Node):
 
     @property
     def prompt(self) -> Prompt:
-        scores = "\n".join(
-            f"  {p.name}: {p.score}" for p in self._round.engine.players
-        )
+        scores = "\n".join(f"  {p.name}: {p.score}" for p in self._round.engine.players)
         return Prompt(
             instruction=(
                 f"Round {self._round_number} complete!\n\n"
@@ -476,13 +483,12 @@ class GameOverNode(Node):
                 f"Final scores:\n{scores}\n\n"
                 f"Type 'home' to return to the main menu."
             ),
-            validator=lambda t: (
-                None if t.strip().lower() == "home" else "Type 'home'."
-            ),
+            validator=lambda t: (None if t.strip().lower() == "home" else "Type 'home'."),
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
         from flop7.app.nodes.home import HomeNode
+
         context.pop("_game_screen", None)
         context.pop("_engine", None)
         context.pop("_bot_controller", None)

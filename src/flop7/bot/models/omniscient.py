@@ -91,7 +91,8 @@ class OmniscientBot(AbstractBot):
 
     @staticmethod
     def _would_bust_from_cards(
-        target: PlayerView, cards: tuple[Card, ...],
+        target: PlayerView,
+        cards: tuple[Card, ...],
     ) -> bool:
         """Simulate whether *target* busts from receiving *cards*.
 
@@ -131,9 +132,7 @@ class OmniscientBot(AbstractBot):
         opponents = [p for p in eligible if p.index != player.index]
 
         # 1. Bust the opponent who loses the most hand score
-        bust_targets = [
-            p for p in opponents if self._would_bust_from_cards(p, next_3)
-        ]
+        bust_targets = [p for p in opponents if self._would_bust_from_cards(p, next_3)]
         if bust_targets:
             return max(bust_targets, key=lambda p: p.active_score)
 
@@ -157,9 +156,7 @@ class OmniscientBot(AbstractBot):
             return player
 
         # Skip opponents likely to bust on their own (> 50 % bust rate)
-        safe_threats = [
-            p for p in others if self._bust_rate(p, view.deck) <= 0.5
-        ]
+        safe_threats = [p for p in others if self._bust_rate(p, view.deck) <= 0.5]
         pool = safe_threats if safe_threats else others
         return max(pool, key=lambda p: p.overall_score)
 

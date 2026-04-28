@@ -9,9 +9,7 @@ if TYPE_CHECKING:
 
 
 class CardAction(Protocol):
-    def __call__(
-        self, game: GameEngine, player: Player, card: Card
-    ) -> Generator:
+    def __call__(self, game: GameEngine, player: Player, card: Card) -> Generator:
         """Generator that performs a card's special action.
 
         Yields decision requests and notification events (same protocol

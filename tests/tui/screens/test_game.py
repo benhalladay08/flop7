@@ -1,6 +1,5 @@
 from flop7.core.classes.cards import FIVE, THREE
 from flop7.tui.screens.game import GameScreen
-
 from tests.conftest import make_engine
 
 

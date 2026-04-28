@@ -64,7 +64,8 @@ class TUIApp:
         if prompt.auto_advance_ms is not None:
             seconds = prompt.auto_advance_ms / 1000.0
             self._auto_advance_handle = self.loop.set_alarm_in(
-                seconds, self._on_auto_advance,
+                seconds,
+                self._on_auto_advance,
             )
 
     def set_screen(self, body: urwid.Widget) -> None:
@@ -100,17 +101,22 @@ class TUIApp:
         yes_btn = urwid.Button("Yes", on_press=lambda _: self.exit())
         no_btn = urwid.Button("No", on_press=lambda _: self._dismiss_quit_dialog())
 
-        buttons = urwid.Columns([
-            ("pack", urwid.AttrMap(yes_btn, "dialog_button")),
-            ("pack", urwid.Text("   ")),
-            ("pack", urwid.AttrMap(no_btn, "dialog_button")),
-        ], focus_column=0)
+        buttons = urwid.Columns(
+            [
+                ("pack", urwid.AttrMap(yes_btn, "dialog_button")),
+                ("pack", urwid.Text("   ")),
+                ("pack", urwid.AttrMap(no_btn, "dialog_button")),
+            ],
+            focus_column=0,
+        )
 
-        dialog = urwid.Pile([
-            urwid.Text("Are you sure you want to quit?", align="center"),
-            urwid.Divider(),
-            urwid.Padding(buttons, align="center", width="pack"),
-        ])
+        dialog = urwid.Pile(
+            [
+                urwid.Text("Are you sure you want to quit?", align="center"),
+                urwid.Divider(),
+                urwid.Padding(buttons, align="center", width="pack"),
+            ]
+        )
 
         box = urwid.LineBox(
             urwid.Filler(urwid.Padding(dialog, left=1, right=1)),
@@ -120,8 +126,10 @@ class TUIApp:
         overlay = urwid.Overlay(
             urwid.AttrMap(box, "dialog"),
             self.frame,
-            align="center", width=38,
-            valign="middle", height=7,
+            align="center",
+            width=38,
+            valign="middle",
+            height=7,
         )
 
         self._quit_dialog_active = True

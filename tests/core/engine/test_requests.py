@@ -1,12 +1,12 @@
 """Smoke tests for flop7.core.engine.requests — dataclass instantiation."""
+
 import pytest
 
 from flop7.core.classes.cards import FIVE
 from flop7.core.classes.player import Player
-from flop7.core.enum.decisions import TargetEvent
 from flop7.core.engine.requests import (
-    CardDrawRequest,
     CardDrawnEvent,
+    CardDrawRequest,
     Flip7Event,
     FlipThreeResolvedEvent,
     FlipThreeStartEvent,
@@ -17,6 +17,7 @@ from flop7.core.engine.requests import (
     SecondChanceEvent,
     TargetRequest,
 )
+from flop7.core.enum.decisions import TargetEvent
 
 
 @pytest.fixture

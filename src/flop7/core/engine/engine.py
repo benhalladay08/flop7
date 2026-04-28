@@ -1,12 +1,12 @@
 from collections.abc import Callable
 
-from flop7.core.classes.cards import Card, SECOND_CHANCE
+from flop7.core.classes.cards import SECOND_CHANCE, Card
 from flop7.core.classes.deck import Deck
 from flop7.core.classes.player import Player
 from flop7.core.engine.actions import get_action
 from flop7.core.engine.requests import (
-    CardDrawRequest,
     CardDrawnEvent,
+    CardDrawRequest,
     Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
@@ -90,7 +90,10 @@ class GameEngine:
                     elif isinstance(req, TargetRequest):
                         req = gen.send(
                             self.target_selector(
-                                self, req.event, req.source, req.eligible,
+                                self,
+                                req.event,
+                                req.source,
+                                req.eligible,
                             )
                         )
                     elif isinstance(req, CardDrawRequest):

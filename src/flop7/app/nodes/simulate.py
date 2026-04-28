@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from flop7.app.nodes.base import Node
 from flop7.app.prompt import Prompt
+from flop7.bot.registry import Bot
 from flop7.simulation import (
     SimulationResults,
     run_game,
@@ -11,10 +12,9 @@ from flop7.simulation import (
     validate_sim_config,
 )
 from flop7.simulation.trackers import default_trackers
-from flop7.bot.registry import Bot
-
 
 # ── Helpers ──────────────────────────────────────────────────────────
+
 
 def _available_bot_names() -> list[str]:
     """Bot names available for simulation (virtual mode, instantiable only)."""
@@ -50,6 +50,7 @@ def _parse_range(text: str, lo_bound: int, hi_bound: int) -> tuple[int, int] | s
 
 def _range_validator(lo_bound: int, hi_bound: int, allow_empty: bool = False):
     """Build a validator for range input."""
+
     def validator(text: str) -> str | None:
         if allow_empty and text.strip() == "":
             return None
@@ -57,6 +58,7 @@ def _range_validator(lo_bound: int, hi_bound: int, allow_empty: bool = False):
         if isinstance(result, str):
             return result
         return None
+
     return validator
 
 
@@ -121,9 +123,13 @@ class SimPlayerCountNode(Node):
 
 # ── Bot configuration (loops per bot type) ───────────────────────────
 
+
 class SimBotConfigNode(Node):
     def __init__(
-        self, index: int, bot_names: list[str], ranges: dict[str, tuple[int, int]],
+        self,
+        index: int,
+        bot_names: list[str],
+        ranges: dict[str, tuple[int, int]],
     ) -> None:
         self._index = index
         self._bot_names = bot_names
@@ -206,6 +212,7 @@ class SimGameCountNode(Node):
 
 # ── Confirm & validate ───────────────────────────────────────────────
 
+
 class SimConfirmNode(Node):
     def __init__(self, error: str | None = None) -> None:
         self._error = error
@@ -215,8 +222,7 @@ class SimConfirmNode(Node):
         if self._error:
             return Prompt(
                 instruction=(
-                    f"Invalid configuration: {self._error}\n\n"
-                    f"Press Enter to reconfigure."
+                    f"Invalid configuration: {self._error}\n\n" f"Press Enter to reconfigure."
                 ),
                 validator=lambda _: None,
             )
@@ -307,9 +313,12 @@ class SimRunNode(Node):
 
 # ── Done ─────────────────────────────────────────────────────────────
 
+
 class SimDoneNode(Node):
     def __init__(
-        self, results: SimulationResults, cancelled: bool = False,
+        self,
+        results: SimulationResults,
+        cancelled: bool = False,
     ) -> None:
         self._results = results
         self._cancelled = cancelled
@@ -322,15 +331,10 @@ class SimDoneNode(Node):
                 f"Type 'home' to return to the main menu."
             )
         else:
-            msg = (
-                "Simulation complete! "
-                "Type 'home' to return to the main menu."
-            )
+            msg = "Simulation complete! " "Type 'home' to return to the main menu."
         return Prompt(
             instruction=msg,
-            validator=lambda t: (
-                None if t.strip().lower() == "home" else "Type 'home'."
-            ),
+            validator=lambda t: (None if t.strip().lower() == "home" else "Type 'home'."),
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:

@@ -1,6 +1,6 @@
 import random
 
-from flop7.core.classes.cards import Card, ALL_CARDS
+from flop7.core.classes.cards import ALL_CARDS, Card
 
 
 class Deck:

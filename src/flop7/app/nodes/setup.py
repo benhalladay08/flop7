@@ -4,8 +4,8 @@ from flop7.app.nodes.base import Node
 from flop7.app.prompt import Prompt
 from flop7.bot.registry import Bot
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────────
+
 
 def _available_bot_names(game_mode: str) -> list[str]:
     """Return bot model names valid for the given game mode."""
@@ -103,6 +103,7 @@ class PlayerCountNode(Node):
 
 # ── Player names ─────────────────────────────────────────────────────────
 
+
 def _make_player_name_validator(existing_names: list[str]):
     existing = {_normalized_name(name) for name in existing_names}
 
@@ -174,6 +175,7 @@ class PlayerNameNode(Node):
 
 # ── Bot count ────────────────────────────────────────────────────────────────
 
+
 def _make_bot_count_validator(min_bots: int, max_bots: int):
     def validator(text: str) -> str | None:
         text = text.strip()
@@ -183,6 +185,7 @@ def _make_bot_count_validator(min_bots: int, max_bots: int):
         if n < min_bots or n > max_bots:
             return f"Must be {min_bots}–{max_bots} bots, got {n}."
         return None
+
     return validator
 
 
@@ -227,6 +230,7 @@ class BotCountNode(Node):
 
 # ── Bot type selection ─────────────────────────────────────────────────────────────
 
+
 def _make_bot_type_validator(valid_names: list[str]):
     lower_names = [n.lower() for n in valid_names]
     options = ", ".join(f"'{n}'" for n in valid_names)
@@ -268,9 +272,7 @@ class BotTypeNode(Node):
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:
-        canonical = next(
-            n for n in self._valid_names if n.lower() == value.strip().lower()
-        )
+        canonical = next(n for n in self._valid_names if n.lower() == value.strip().lower())
         updated = self._types + [canonical]
         context["bot_types"] = updated
         if self._index < self._total:
@@ -284,6 +286,7 @@ class BotTypeNode(Node):
 
 
 # ── Setup complete ────────────────────────────────────────────────────────────────
+
 
 class SetupCompleteNode(Node):
     """Builds the engine from setup context and starts the game."""

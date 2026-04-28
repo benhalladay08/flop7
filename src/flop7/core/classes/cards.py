@@ -5,6 +5,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Card:
     """Base dataclass for all Flip 7 cards."""
+
     name: str
     abbrv: str
     num_in_deck: int

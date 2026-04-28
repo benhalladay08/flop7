@@ -9,9 +9,7 @@ class TestValidateSimConfig:
         assert validate_sim_config((3, 10), {"Basic": (0, 10)}) is None
 
     def test_valid_multiple_bot_types(self):
-        assert validate_sim_config(
-            (3, 10), {"Basic": (0, 10), "Omniscient": (0, 10)}
-        ) is None
+        assert validate_sim_config((3, 10), {"Basic": (0, 10), "Omniscient": (0, 10)}) is None
 
     def test_valid_tight_range(self):
         assert validate_sim_config((5, 5), {"Basic": (5, 5)}) is None
@@ -41,7 +39,8 @@ class TestSampleGameConfig:
     def test_respects_per_type_min(self):
         for _ in range(50):
             config = sample_game_config(
-                (6, 6), {"Basic": (3, 6), "Omniscient": (0, 3)},
+                (6, 6),
+                {"Basic": (3, 6), "Omniscient": (0, 3)},
             )
             assert config["Basic"] >= 3
             assert config["Omniscient"] >= 0
@@ -50,7 +49,8 @@ class TestSampleGameConfig:
     def test_respects_per_type_max(self):
         for _ in range(50):
             config = sample_game_config(
-                (4, 4), {"Basic": (0, 2), "Omniscient": (0, 4)},
+                (4, 4),
+                {"Basic": (0, 2), "Omniscient": (0, 4)},
             )
             assert config["Basic"] <= 2
             assert config["Omniscient"] <= 4

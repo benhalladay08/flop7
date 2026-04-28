@@ -9,7 +9,6 @@ from flop7.app.nodes.game import (
 )
 from flop7.bot.controller import BotController
 from flop7.core.classes.cards import FIVE, FREEZE, SEVEN, THREE
-
 from tests.conftest import make_engine
 
 

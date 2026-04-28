@@ -69,11 +69,7 @@ class PlayerListWidget(urwid.WidgetWrap):
         if self._compact:
             header_text = "  D   Player      Score  St"
         else:
-            header_text = (
-                "  D   Player       Cards"
-                + " " * 28
-                + "Score  Status"
-            )
+            header_text = "  D   Player       Cards" + " " * 28 + "Score  Status"
 
         rows.append(urwid.AttrMap(urwid.Text(header_text), "instruction"))
         rows.append(urwid.Divider("─"))
@@ -130,10 +126,7 @@ class PlayerListWidget(urwid.WidgetWrap):
         if status == "Busted":
             card_text += " ← BUST"
         score = str(player.active_score)
-        return (
-            f"{arrow}{dealer}{player.name:<12} "
-            f"{card_text:<40} {score:>5}  {status}"
-        )
+        return f"{arrow}{dealer}{player.name:<12} " f"{card_text:<40} {score:>5}  {status}"
 
     def _compact_row(
         self,

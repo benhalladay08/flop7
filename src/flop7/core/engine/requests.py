@@ -12,18 +12,21 @@ if TYPE_CHECKING:
 @dataclass
 class HitStayRequest:
     """Yield to ask whether a player should hit or stay."""
+
     player: Player
 
 
 @dataclass
 class CardDrawRequest:
     """Yield to ask the driver to provide the next drawn card."""
+
     player: Player
 
 
 @dataclass
 class TargetRequest:
     """Yield to ask who should be targeted by an action card."""
+
     event: TargetEvent
     source: Player
     eligible: list[Player]
@@ -32,6 +35,7 @@ class TargetRequest:
 @dataclass
 class CardDrawnEvent:
     """Yield to notify that a card was drawn."""
+
     player: Player
     card: Card
 
@@ -39,6 +43,7 @@ class CardDrawnEvent:
 @dataclass
 class PlayerBustedEvent:
     """Yield to notify that a player busted."""
+
     player: Player
     card: Card
 
@@ -46,18 +51,21 @@ class PlayerBustedEvent:
 @dataclass
 class RoundOverEvent:
     """Yield to notify that the round is complete."""
+
     round_number: int
 
 
 @dataclass
 class Flip7Event:
     """Yield to notify that a player achieved Flip 7 (7 unique number cards)."""
+
     player: Player
 
 
 @dataclass
 class FreezeEvent:
     """Yield to notify that a player has been frozen by a Freeze action."""
+
     source: Player
     target: Player
 
@@ -65,6 +73,7 @@ class FreezeEvent:
 @dataclass
 class SecondChanceEvent:
     """Yield to notify that a Second Chance card was assigned to a player."""
+
     source: Player
     target: Player
 
@@ -72,6 +81,7 @@ class SecondChanceEvent:
 @dataclass
 class FlipThreeStartEvent:
     """Yield to notify that a Flip Three sequence is beginning."""
+
     source: Player
     target: Player
 
@@ -79,4 +89,5 @@ class FlipThreeStartEvent:
 @dataclass
 class FlipThreeResolvedEvent:
     """Yield to notify that a Flip Three sequence has finished resolving."""
+
     target: Player

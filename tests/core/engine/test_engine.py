@@ -5,34 +5,33 @@ from unittest.mock import MagicMock
 import pytest
 
 from flop7.core.classes.cards import (
-    FIVE,
-    THREE,
-    SEVEN,
-    NINE,
-    TEN,
-    ELEVEN,
-    TWELVE,
-    ZERO,
-    ONE,
-    TWO,
-    FOUR,
-    SIX,
     EIGHT,
+    ELEVEN,
+    FIVE,
+    FLIP_THREE,
+    FOUR,
+    FREEZE,
+    NINE,
+    ONE,
     PLUS_FOUR,
     SECOND_CHANCE,
-    FLIP_THREE,
-    FREEZE,
+    SEVEN,
+    SIX,
+    TEN,
+    THREE,
+    TWELVE,
+    TWO,
+    ZERO,
 )
 from flop7.core.engine.engine import GameEngine
 from flop7.core.engine.requests import (
-    CardDrawRequest,
     CardDrawnEvent,
+    CardDrawRequest,
     Flip7Event,
     HitStayRequest,
     PlayerBustedEvent,
     RoundOverEvent,
 )
-
 from tests.conftest import (
     OPENING_CARDS,
     drive_round,
@@ -172,9 +171,7 @@ class TestRoundBasicFlow:
         )
 
         drawn_events = [
-            (event.player, event.card)
-            for event in events
-            if isinstance(event, CardDrawnEvent)
+            (event.player, event.card) for event in events if isinstance(event, CardDrawnEvent)
         ]
         assert drawn_events == [
             (p2, FLIP_THREE),
@@ -204,9 +201,7 @@ class TestOpeningDealFreeze:
             target_responses=[p3],
         )
 
-        drawn_events = [
-            (e.player, e.card) for e in events if isinstance(e, CardDrawnEvent)
-        ]
+        drawn_events = [(e.player, e.card) for e in events if isinstance(e, CardDrawnEvent)]
         # Opening: P2→FREEZE, P1→FIVE. Main loop: P2 force-draws THREE.
         assert drawn_events == [(p2, FREEZE), (p1, FIVE), (p2, THREE)]
         assert not any(e.player is p3 for e in events if isinstance(e, CardDrawnEvent))
@@ -265,9 +260,7 @@ class TestSecondChanceAbsorption:
 
         assert p2.score == 5
         assert not p2.has_card(SECOND_CHANCE)
-        assert not any(
-            isinstance(e, PlayerBustedEvent) and e.player is p2 for e in events
-        )
+        assert not any(isinstance(e, PlayerBustedEvent) and e.player is p2 for e in events)
 
     def test_second_chance_discards_both_cards(self):
         engine = make_engine(opening_cards(0, 1, 2) + [FIVE], n_players=3)
@@ -486,7 +479,7 @@ class TestFlip7:
 
         events = drive_round(engine, hit_responses=hits)
         flip7_idx = next(i for i, event in enumerate(events) if isinstance(event, Flip7Event))
-        after_flip7 = events[flip7_idx + 1:]
+        after_flip7 = events[flip7_idx + 1 :]
         hit_stay_after = [event for event in after_flip7 if isinstance(event, HitStayRequest)]
         assert hit_stay_after == []
 
@@ -538,9 +531,11 @@ class TestPlayListeners:
     def _always_stay_engine():
         """Engine with a full deck where all players always stay."""
         from flop7.core.classes.deck import Deck
+
         players = make_players(3)
         return GameEngine(
-            Deck(), players,
+            Deck(),
+            players,
             card_provider=lambda game, player: game.deck.deal(),
             hit_stay_decider=lambda game, player: False,
             target_selector=lambda game, event, player, eligible: eligible[0],

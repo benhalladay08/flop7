@@ -1,4 +1,5 @@
 """Tests for OmniscientBot decision logic."""
+
 from __future__ import annotations
 
 import pytest
@@ -15,12 +16,9 @@ from flop7.core.classes.cards import (
     SIX,
     TEN,
     THREE,
-    TWELVE,
     TWO,
-    ZERO,
 )
 from flop7.core.enum.decisions import TargetEvent
-
 from tests.conftest import make_engine
 
 
@@ -46,6 +44,7 @@ def _target(bot, game, event, source_index, eligible_indexes):
 
 
 # ── Hit / Stay ──────────────────────────────────────────────────────
+
 
 class TestHitStay:
 
@@ -81,6 +80,7 @@ class TestHitStay:
 
     def test_hits_on_non_bustable_modifier(self, bot, game):
         from flop7.core.classes.cards import PLUS_FOUR
+
         game.players[0].hand = [PLUS_FOUR]
         game.deck.draw_pile = [PLUS_FOUR]
         view = _view(game)
@@ -89,6 +89,7 @@ class TestHitStay:
 
 
 # ── Bust simulation ─────────────────────────────────────────────────
+
 
 class TestWouldBustFromCards:
 
@@ -140,6 +141,7 @@ class TestWouldBustFromCards:
 
 # ── Bust rate ────────────────────────────────────────────────────────
 
+
 class TestBustRate:
 
     def test_zero_when_no_duplicates_possible(self, bot, game):
@@ -169,6 +171,7 @@ class TestBustRate:
 
 
 # ── Freeze targeting ─────────────────────────────────────────────────
+
 
 class TestFreezeTarget:
 
@@ -209,6 +212,7 @@ class TestFreezeTarget:
 
 
 # ── Flip Three targeting ─────────────────────────────────────────────
+
 
 class TestFlipThreeTarget:
 
@@ -265,6 +269,7 @@ class TestFlipThreeTarget:
 
 # ── Second Chance targeting ──────────────────────────────────────────
 
+
 class TestSecondChanceTarget:
 
     def test_gives_to_highest_bust_rate(self, bot, game):
@@ -278,10 +283,12 @@ class TestSecondChanceTarget:
 
 # ── Integration: full game ───────────────────────────────────────────
 
+
 class TestIntegration:
 
     def test_completes_full_game(self):
         from flop7.simulation import run_game
+
         engine = run_game({"Omniscient": 3})
         assert engine.game_over
         assert engine.winner is not None
@@ -289,6 +296,7 @@ class TestIntegration:
     def test_beats_basic_more_often(self):
         """Over many games, Omniscient should win more than random chance."""
         from flop7.simulation import run_game
+
         omniscient_wins = 0
         games = 100
         for _ in range(games):
@@ -297,6 +305,6 @@ class TestIntegration:
             if winner_type == "Omniscient":
                 omniscient_wins += 1
         # With 3 of each, random chance is 50%. Omniscient should do better.
-        assert omniscient_wins > 35, (
-            f"Omniscient won only {omniscient_wins}/{games} — expected > 35"
-        )
+        assert (
+            omniscient_wins > 35
+        ), f"Omniscient won only {omniscient_wins}/{games} — expected > 35"

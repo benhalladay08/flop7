@@ -45,9 +45,7 @@ def sample_game_config(
     counts = {name: lo for name, (lo, _) in bot_ranges.items()}
     remaining = player_count - sum_mins
 
-    expandable = [
-        name for name, (lo, hi) in bot_ranges.items() if hi > lo
-    ]
+    expandable = [name for name, (lo, hi) in bot_ranges.items() if hi > lo]
     random.shuffle(expandable)
 
     while remaining > 0 and expandable:

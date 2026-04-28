@@ -1,11 +1,11 @@
 """Tests for flop7.core.classes.deck — Deck construction, deal, discard, reshuffle."""
+
 from unittest.mock import MagicMock
 
 import pytest
 
-from flop7.core.classes.cards import ALL_CARDS, FIVE, THREE, SEVEN
+from flop7.core.classes.cards import ALL_CARDS, FIVE, SEVEN, THREE
 from flop7.core.classes.deck import Deck
-
 from tests.conftest import make_deck
 
 
@@ -22,9 +22,9 @@ class TestBuildCardList:
         cards = deck._build_card_list()
         for template in ALL_CARDS:
             count = sum(1 for c in cards if c is template)
-            assert count == template.num_in_deck, (
-                f"{template.name} expected {template.num_in_deck}, got {count}"
-            )
+            assert (
+                count == template.num_in_deck
+            ), f"{template.name} expected {template.num_in_deck}, got {count}"
 
 
 class TestDeal:

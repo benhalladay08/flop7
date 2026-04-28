@@ -27,11 +27,13 @@ class CommandBar(urwid.WidgetWrap):
         self._error_attrmap = urwid.AttrMap(self._error, "error")
         self._spacer = urwid.Text("")
 
-        self._pile = urwid.Pile([
-            urwid.AttrMap(self._instruction, "instruction"),
-            urwid.Divider("─"),
-            urwid.AttrMap(self._edit, "command"),
-        ])
+        self._pile = urwid.Pile(
+            [
+                urwid.AttrMap(self._instruction, "instruction"),
+                urwid.Divider("─"),
+                urwid.AttrMap(self._edit, "command"),
+            ]
+        )
         super().__init__(self._pile)
 
     # --- public API ---------------------------------------------------
@@ -87,5 +89,3 @@ class CommandBar(urwid.WidgetWrap):
             self._error.set_text("")
             if len(self._pile.contents) > 3:
                 self._pile.contents = self._pile.contents[:3]
-
-

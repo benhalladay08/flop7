@@ -1,4 +1,4 @@
-from flop7.core.classes.cards import Card, ALL_CARDS
+from flop7.core.classes.cards import ALL_CARDS, Card
 from flop7.core.classes.deck import Deck
 from flop7.core.classes.player import Player
 

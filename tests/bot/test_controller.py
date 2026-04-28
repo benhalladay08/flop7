@@ -6,7 +6,6 @@ from flop7.bot.base import AbstractBot
 from flop7.bot.controller import BotController
 from flop7.core.classes.cards import FIVE, SEVEN, THREE
 from flop7.core.enum.decisions import TargetEvent
-
 from tests.conftest import make_engine
 
 

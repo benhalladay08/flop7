@@ -1,4 +1,5 @@
 """Tests for BasicBot decision logic."""
+
 from __future__ import annotations
 
 from unittest.mock import patch
@@ -19,7 +20,6 @@ from flop7.core.classes.cards import (
     TWO,
 )
 from flop7.core.enum.decisions import TargetEvent
-
 from tests.conftest import make_engine
 
 

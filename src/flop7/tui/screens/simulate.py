@@ -31,11 +31,13 @@ class SimulateScreen(urwid.WidgetWrap):
         self._progress_bar = urwid.ProgressBar("dimmed", "active", current=0, done=1)
         self._results_text = urwid.Text("")
 
-        self._results_pile = urwid.Pile([
-            self._status_text,
-            urwid.Divider(),
-            self._results_text,
-        ])
+        self._results_pile = urwid.Pile(
+            [
+                self._status_text,
+                urwid.Divider(),
+                self._results_text,
+            ]
+        )
         self._results_box = urwid.Filler(self._results_pile, valign="top")
 
         self._last_mode: str | None = None
@@ -55,9 +57,7 @@ class SimulateScreen(urwid.WidgetWrap):
         self._progress_bar.set_completion(completed)
         self._progress_bar.done = total
         pct = completed / total * 100 if total > 0 else 0
-        self._status_text.set_text(
-            f"Running simulation... {completed:,}/{total:,} ({pct:.0f}%)"
-        )
+        self._status_text.set_text(f"Running simulation... {completed:,}/{total:,} ({pct:.0f}%)")
         self._results_pile.contents = [
             (self._status_text, ("pack", None)),
             (urwid.Divider(), ("pack", None)),
@@ -83,8 +83,7 @@ class SimulateScreen(urwid.WidgetWrap):
             entries = results.bot_entries_by_type.get(name, 0)
             rate = results.win_rate(name)
             lines.append(
-                f"  {name:<{max_name}}  {rate:5.1f}%  "
-                f"({wins:,} wins / {entries:,} entries)"
+                f"  {name:<{max_name}}  {rate:5.1f}%  " f"({wins:,} wins / {entries:,} entries)"
             )
 
         lines.append("")
@@ -131,17 +130,22 @@ class SimulateScreen(urwid.WidgetWrap):
     def _build_wide(self) -> urwid.Widget:
         left = urwid.LineBox(self._config_box, title="Configuration")
         right = urwid.LineBox(self._results_box, title="Results")
-        return urwid.Columns([
-            ("weight", 1, left),
-            ("weight", 2, right),
-        ])
+        return urwid.Columns(
+            [
+                ("weight", 1, left),
+                ("weight", 2, right),
+            ]
+        )
 
     def _build_compact(self) -> urwid.Widget:
         left = urwid.LineBox(
-            urwid.BoxAdapter(self._config_box, 8), title="Configuration",
+            urwid.BoxAdapter(self._config_box, 8),
+            title="Configuration",
         )
         right = urwid.LineBox(self._results_box, title="Results")
-        return urwid.Pile([
-            ("pack", left),
-            right,
-        ])
+        return urwid.Pile(
+            [
+                ("pack", left),
+                right,
+            ]
+        )
