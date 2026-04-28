@@ -16,6 +16,25 @@ def _available_bot_names(game_mode: str) -> list[str]:
     return names
 
 
+def _normalized_name(name: str) -> str:
+    """Normalize player names for uniqueness checks and target input."""
+    return name.strip().casefold()
+
+
+def _unique_name(base: str, existing_names: list[str]) -> str:
+    """Return a player name that does not collide with existing names."""
+    existing = {_normalized_name(name) for name in existing_names}
+    if _normalized_name(base) not in existing:
+        return base
+
+    suffix = 2
+    while True:
+        candidate = f"{base} #{suffix}"
+        if _normalized_name(candidate) not in existing:
+            return candidate
+        suffix += 1
+
+
 # ── Game mode ────────────────────────────────────────────────────────────────
 
 _GAME_MODE_TEXT = """\
@@ -84,6 +103,20 @@ class PlayerCountNode(Node):
 
 # ── Player names ─────────────────────────────────────────────────────────
 
+def _make_player_name_validator(existing_names: list[str]):
+    existing = {_normalized_name(name) for name in existing_names}
+
+    def validator(text: str) -> str | None:
+        error = _player_name_validator(text)
+        if error is not None:
+            return error
+        if _normalized_name(text) in existing:
+            return "Player names must be unique."
+        return None
+
+    return validator
+
+
 def _player_name_validator(text: str) -> str | None:
     text = text.strip()
     if not text:
@@ -111,7 +144,7 @@ class PlayerNameNode(Node):
     def prompt(self) -> Prompt:
         return Prompt(
             instruction=self._build_instruction(),
-            validator=_player_name_validator,
+            validator=_make_player_name_validator(self._names),
         )
 
     def on_input(self, value: str, context: dict) -> Node | None:

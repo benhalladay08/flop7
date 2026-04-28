@@ -59,6 +59,7 @@ _VALID_CARD_DISPLAY = "0–12, +2, +4, +6, +8, +10, x2, F3, FZ, SC"
 
 def _build_engine(context: dict):
     """Construct a GameEngine from the accumulated setup context."""
+    from flop7.app.nodes.setup import _normalized_name, _unique_name
     from flop7.bot.registry import Bot
     from flop7.core.classes.deck import Deck
     from flop7.core.classes.player import Player
@@ -68,14 +69,23 @@ def _build_engine(context: dict):
     real_mode = game_mode == "real"
     virtual = game_mode == "virtual"
 
-    players = [Player(name) for name in context["player_names"]]
+    human_names = context["player_names"]
+    normalized_human_names = {_normalized_name(name) for name in human_names}
+    if len(normalized_human_names) != len(human_names):
+        raise ValueError("Player names must be unique.")
+
+    players = [Player(name) for name in human_names]
     bots_by_index = {}
 
     for i, bot_type in enumerate(context.get("bot_types", []), 1):
         bot = Bot.create(bot_type, virtual=virtual)
         bot_index = len(players)
         bots_by_index[bot_index] = bot
-        players.append(Player(f"Bot {i} ({bot_type})"))
+        bot_name = _unique_name(
+            f"Bot {i} ({bot_type})",
+            [player.name for player in players],
+        )
+        players.append(Player(bot_name))
 
     bot_controller = BotController(bots_by_index)
     context["_bot_controller"] = bot_controller
