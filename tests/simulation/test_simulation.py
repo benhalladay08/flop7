@@ -143,11 +143,22 @@ class TestSimulationResults:
         total_rate = results.win_rate("TypeA") + results.win_rate("TypeB")
         assert abs(total_rate - 110.0) < 0.01
 
+    def test_win_share_uses_total_wins_as_denominator(self):
+        results = SimulationResults()
+        results.wins_by_type = {"TypeA": 60, "TypeB": 40}
+        results.bot_entries_by_type = {"TypeA": 200, "TypeB": 50}
+
+        assert abs(results.win_share("TypeA") - 60.0) < 0.01
+        assert abs(results.win_share("TypeB") - 40.0) < 0.01
+        total_share = results.win_share("TypeA") + results.win_share("TypeB")
+        assert abs(total_share - 100.0) < 0.01
+
     def test_empty_results(self):
         results = SimulationResults()
         assert results.avg_game_length == 0.0
         assert results.avg_winning_score == 0.0
         assert results.win_rate("Basic") == 0.0
+        assert results.win_share("Basic") == 0.0
 
     def test_bot_entries_by_type_tracks_participation(self):
         results = SimulationResults()
@@ -159,12 +170,12 @@ class TestSimulationResults:
 class TestRunGameWithTrackers:
 
     def test_trackers_receive_events(self):
-        from flop7.simulation.trackers import default_trackers
+        from flop7.simulation.trackers import BustTracker, default_trackers
 
         trackers = default_trackers()
         run_game({"Basic": 3}, trackers=trackers)
 
-        bust_tracker = trackers[2]
+        bust_tracker = next(t for t in trackers if isinstance(t, BustTracker))
         assert bust_tracker._games == 1
 
     def test_flip7_tracker_accumulates_across_games(self):

@@ -88,6 +88,13 @@ class SimulateScreen(urwid.WidgetWrap):
             )
 
         lines.append("")
+        lines.append("Percent of Wins:")
+        for name in bot_types:
+            wins = results.wins_by_type.get(name, 0)
+            share = results.win_share(name)
+            lines.append(f"  {name:<{max_name}}  {share:5.1f}%  ({wins:,} wins)")
+
+        lines.append("")
         lines.append(f"Avg Game Length:   {results.avg_game_length:.1f} rounds")
         lines.append(f"Avg Winning Score: {results.avg_winning_score:.1f}")
 

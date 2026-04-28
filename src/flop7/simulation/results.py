@@ -56,3 +56,9 @@ class SimulationResults:
         if entries == 0:
             return 0.0
         return self.wins_by_type.get(bot_type, 0) / entries * 100
+
+    def win_share(self, bot_type: str) -> float:
+        total_wins = sum(self.wins_by_type.values())
+        if total_wins == 0:
+            return 0.0
+        return self.wins_by_type.get(bot_type, 0) / total_wins * 100

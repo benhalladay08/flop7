@@ -36,7 +36,7 @@ def run_game(
         target_selector=controller.target_selector,
     )
 
-    _trackers = trackers or ()
+    _trackers = trackers if trackers is not None else ()
     listeners = [tracker.on_event for tracker in _trackers]
     engine.play(listeners=listeners)
     for tracker in _trackers:
