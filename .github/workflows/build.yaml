@@ -68,6 +68,7 @@ jobs:
           --onefile
           --name flop7
           --collect-all flop7
+          --collect-all urwid
           src/flop7/__main__.py
 
       - name: Create tarball
