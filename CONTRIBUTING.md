@@ -43,11 +43,26 @@ docs: clarify tracker registration in default_trackers
 
 ## Code style
 
-Pre-commit hooks (ruff + black) are planned. Until they land, please keep new code consistent with the surrounding files:
+Style is enforced by [pre-commit](https://pre-commit.com/) hooks: `ruff` (lint + autofix + import sorting) and `black` (formatting). Set them up once after cloning:
+
+```bash
+pip install -e ".[dev]"
+pre-commit install
+```
+
+After that, `ruff` and `black` run automatically on every commit. To run them manually:
+
+```bash
+pre-commit run --all-files
+```
+
+Configuration lives in `pyproject.toml` (`[tool.ruff]`, `[tool.black]`) and `.pre-commit-config.yaml`.
+
+A few stylistic conventions that aren't enforced by the linter but match the rest of the codebase:
 
 - Type hints on public functions and dataclass fields
 - `from __future__ import annotations` at the top of files using forward references
-- Imports grouped: stdlib → third-party → first-party (`flop7.*`) → local
+- Use `Protocol` for engine-side dependency contracts; use `ABC` for `AbstractBot`
 
 ## Tests
 

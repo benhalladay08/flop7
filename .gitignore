@@ -2,8 +2,29 @@
 __pycache__/
 *.pyc
 
+# Virtual environments
+.venv/
+venv/
+env/
+
 # Package build artifacts
+build/
+dist/
+*.egg-info/
 src/flop7.egg-info/
 
-# Mac specific files
+# Test and lint caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# PyInstaller (used by build.yaml)
+*.spec
+
+# Editor / OS
 .DS_Store
+.idea/
+.vscode/
+*.swp

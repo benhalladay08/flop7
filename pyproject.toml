@@ -5,15 +5,48 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "flop7"
 version = "0.1.0"
-description = "An unofficial Flip 7 terminal emulator"
+description = "An unofficial Flip 7 terminal emulator and bot-testing sandbox"
 authors = [
     {name = "Ben Halladay"}
 ]
 readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.10"
+keywords = ["flip7", "card-game", "tui", "urwid", "bot", "simulation", "game"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console :: Curses",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment :: Board Games",
+    "Topic :: Games/Entertainment :: Simulation",
+    "Topic :: Terminals",
+]
 dependencies = [
     "urwid>=2.0.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pre-commit>=3.0",
+    "ruff>=0.5",
+    "black>=24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/benhalladay08/flop7"
+Documentation = "https://github.com/benhalladay08/flop7/tree/main/docs"
+Repository = "https://github.com/benhalladay08/flop7"
+Issues = "https://github.com/benhalladay08/flop7/issues"
 
 [project.scripts]
 flop7 = "flop7.cli:main"
@@ -26,3 +59,17 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "flop7" = ["tui/components/**/*.txt"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["E501"]
